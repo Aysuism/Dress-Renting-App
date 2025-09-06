@@ -8,6 +8,7 @@ import preloader from './assets/img/preloader.gif'
 import { useEffect, useState } from "react"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
+import AdminPanel from "./pages/AdminPanel"
 
 const Router = () => {
   const [loading, setLoading] = useState(true);
@@ -27,15 +28,16 @@ const Router = () => {
 
   return (
     <BrowserRouter>
-      <Header showSection={() => { }} favoriteCount={0} />
+      <Header showSection={() => { }}/>
       <div className="app-container px-4 md:px-20 ">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/:urlid" element={<ProductDetails />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/add-cloth" element={<AddCloth />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/add-cloth" element={<AddCloth />} />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </div>
     </BrowserRouter>

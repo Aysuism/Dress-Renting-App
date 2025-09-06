@@ -1,19 +1,22 @@
 import { useWishlist } from "react-use-wishlist";
 import WishlistCard from "../components/WishlistCard";
-import type { Item } from 'react-use-wishlist'
+import type { Item } from "react-use-wishlist";
 
 interface WishlistData extends Item {
   category: string;
-  color: string;
-  image: string
+  colors: { id: number; name: string; hex: string }[];
+  sizes: string[];
+  rentDuration: number;
+  offerType: string;
+  image: string;
 }
 
 const Wishlist = () => {
   const { items } = useWishlist();
 
-  const favItems = items.filter((item, index, self) => 
-    index === self.findIndex(t => t.id === item.id)
-  );
+  const favItems: WishlistData[] = items.filter(
+    (item, index, self) => index === self.findIndex((t) => t.id === item.id)
+  ) as WishlistData[];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -29,23 +32,14 @@ const Wishlist = () => {
             className="w-48 h-48 object-contain mb-4"
           />
           <h1 className="text-lg font-semibold text-gray-700">
-            Istək Siyahınız Boşdur!
+            İstək siyahınız boşdur!
           </h1>
         </div>
       ) : (
         <div className="flex flex-col gap-4 px-4 sm:px-6 md:px-10">
-          {favItems.map((item) => {
-            // Ensure item has all WishlistData properties
-            const wishListData: WishlistData = {
-              ...item,
-              category: (item as WishlistData).category || "",
-              color: (item as WishlistData).color || "",
-              image: (item as WishlistData).image || "",
-            };
-            return (
-              <WishlistCard key={item.id} wishListData={wishListData} />
-            );
-          })}
+          {favItems.map((item) => (
+            <WishlistCard key={item.id} wishListData={item} />
+          ))}
         </div>
       )}
     </div>

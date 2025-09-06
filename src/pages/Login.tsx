@@ -20,12 +20,9 @@ const Login = () => {
       .then((res) => {
         console.log("Login success!", res.data);
 
-        // Save access token in cookie
         setCookie("token", res.data.accessToken, { path: "/" });
         setCookie("refreshToken", res.data.refreshToken, { path: "/" });
 
-        // Optionally save refresh token if needed
-        // setCookie("refreshToken", res.data.refreshToken, { path: "/" });
       })
       .catch((err) => {
         console.error("Login error:", err);

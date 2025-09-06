@@ -1,169 +1,96 @@
 import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
-import { useAddClothesMutation } from "../tools/product";
-import Swal from "sweetalert2";
-import type { Option } from "../components/SelectButton";
-import SelectButton, { MultiSelectButton } from "../components/SelectButton";
+import { submitProduct } from '../tools/api';
+import type { Option, FormData } from "../tools/types";
+import SelectButton from "../components/SelectButton";
 
-interface FormData {
-  category: Option | null;
-  color: Option[];
-  gender: Option | null;
-  price: number;
-  size: string[];
-  images: File[]; // Changed from string[] to File[]
-  offerType: "RENT" | "SALE";
-  condition: "FIRST_HAND" | "SECOND_HAND";
-  rentDuration?: number;
-  productCode: string;
-}
+const categories: Option[] = [
+  { id: 1, name: "Köynək" },
+  { id: 2, name: "Şalvar" },
+  { id: 3, name: "Ayaqqabı" },
+];
 
-const options = {
-  categories: [
-    { id: 1, name: "Don" },
-    { id: 2, name: "Kostyum" },
-  ],
-  size: [
-    { id: 1, name: "S" },
-    { id: 2, name: "M" },
-    { id: 3, name: "L" },
-    { id: 4, name: "XL" },
-    { id: 5, name: "XXL" },
-  ],
-  genders: [
-    { id: 1, name: "Qadın" },
-    { id: 2, name: "Kişi" },
-    { id: 3, name: "Uşaq" },
-  ],
-  colors: [
-    { id: 1, name: "Qırmızı" },
-    { id: 2, name: "Mavi" },
-    { id: 3, name: "Yaşıl" },
-    { id: 4, name: "Qara" },
-    { id: 5, name: "Ağ" },
-    { id: 6, name: "Çəhrayı" },
-    { id: 7, name: "Bənövşəyi" },
-  ],
-  conditions: [
-    { id: 1, name: "FIRST_HAND" },
-    { id: 2, name: "SECOND_HAND" },
-  ],
-  offerTypes: [
-    { id: 1, name: "RENT" },
-    { id: 2, name: "SALE" },
-  ],
-};
+const genderOptions: Option[] = [
+  { id: 1, name: "QADIN" },
+  { id: 2, name: "KİŞİ" },
+  { id: 3, name: "UŞAQ" },
+];
 
-const colorMap: Record<string, string> = {
-  "Qırmızı": "RED",
-  "Mavi": "BLUE",
-  "Yaşıl": "GREEN",
-  "Qara": "BLACK",
-  "Ağ": "WHITE",
-  "Çəhrayı": "PINK",
-  "Bənövşəyi": "PURPLE"
-};
+const offerOptions: Option[] = [
+  { id: 1, name: "KİRAYƏ" },
+  { id: 2, name: "SATIŞ" },
+];
 
-const genderMap: Record<string, string> = {
-  "Qadın": "WOMAN",
-  "Kişi": "MAN",
-  "Uşaq": "UNISEX",
-};
+const conditionOptions: Option[] = [
+  { id: 1, name: "BİRİNCİ ƏL" },
+  { id: 2, name: "İKİNCİ ƏL" },
+];
 
-const conditionMap: Record<string, string> = {
-  "FIRST_HAND": "FIRST_HAND",
-  "SECOND_HAND": "SECOND_HAND",
-};
+const colorOptions: Option[] = [
+  { id: 1, name: "Qırmızı" },
+  { id: 2, name: "Yaşıl" },
+  { id: 3, name: "Mavi" },
+  { id: 4, name: "Qara" },
+  { id: 5, name: "Ağ" },
+  { id: 6, name: "Sarı" },
+  { id: 7, name: "Bənövşəyi" },
+  { id: 8, name: "Çəhrayı" },
+  { id: 9, name: "Narıncı" },
+  { id: 10, name: "Qəhvəyi" },
+];
 
-const offerTypeMap: Record<string, string> = {
-  "RENT": "RENT",
-  "SALE": "SALE",
-};
+const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL"];
 
-const generateProductCode = () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  return `P-${timestamp}-${random}`;
-};
+const generateProductCode = () => `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 const AddCloth = () => {
   const [formData, setFormData] = useState<FormData>({
     category: null,
-    color: [],
     gender: null,
+    offerType: offerOptions[1],
+    condition: conditionOptions[0],
+    colors: [],
+    sizes: [],
     price: 0,
-    size: [],
     images: [],
-    offerType: "SALE",
-    condition: "FIRST_HAND",
     rentDuration: 1,
     productCode: generateProductCode(),
+    name: "",
+    surname: "",
+    email: "",
+    phone: "",
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [addClothes, { isLoading }] = useAddClothesMutation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
-  const optionsForSelect: Record<string, Option[]> = {
-    categories: options.categories,
-    sizes: options.size,
-    genders: options.genders,
-    colors: options.colors,
-    conditions: options.conditions,
-    offerTypes: options.offerTypes,
-  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
 
-    if (!formData.category) newErrors.category = "Category is required";
-    if (formData.color.length === 0) newErrors.color = "At least one color is required";
-    if (!formData.gender) newErrors.gender = "Gender is required";
-    if (formData.price <= 0) newErrors.price = "Valid price is required";
-    if (formData.size.length === 0) newErrors.size = "At least one size is required";
-    if (formData.images.length === 0) newErrors.images = "At least one image is required";
-    if (formData.offerType === "RENT" && (!formData.rentDuration || formData.rentDuration <= 0)) {
-      newErrors.rentDuration = "Valid rent duration is required for rental offers";
+    if (!formData.category) newErrors.category = "Kateqoriya tələb olunur";
+    if (!formData.gender) newErrors.gender = "Cinsiyyət tələb olunur";
+    if (formData.colors.length === 0) newErrors.colors = "Ən azı bir rəng seçilməlidir";
+    if (formData.sizes.length === 0) newErrors.sizes = "Ən azı bir ölçü seçilməlidir";
+    if (formData.price <= 0) newErrors.price = "Qiymət 0-dan böyük olmalıdır";
+    if (!formData.name.trim()) newErrors.name = "Ad tələb olunur";
+    if (!formData.email.trim()) newErrors.email = "Email tələb olunur";
+    if (!formData.phone.trim()) newErrors.phone = "Telefon nömrəsi tələb olunur";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.email && !emailRegex.test(formData.email)) {
+      newErrors.email = "Düzgün email ünvanı daxil edin";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const fileArray = Array.from(files);
-      const imageUrls: string[] = [];
-      
-      for (let i = 0; i < fileArray.length; i++) {
-        imageUrls.push(URL.createObjectURL(fileArray[i]));
-      }
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
 
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...fileArray].slice(0, 10) // Allow up to 10 images
-      }));
-
-      setImagePreviews(prev => [...prev, ...imageUrls].slice(0, 10));
-
-      if (errors.images) {
-        setErrors(prev => ({ ...prev, images: undefined }));
-      }
-    }
-  };
-
-  const handleSizeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      size: checked
-        ? [...prev.size, value]
-        : prev.size.filter(s => s !== value)
-    }));
-
-    if (errors.size) {
-      setErrors(prev => ({ ...prev, size: undefined }));
+    if (errors[name as keyof FormData]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
@@ -171,98 +98,44 @@ const AddCloth = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      Swal.fire({
-        title: "Validation Error!",
-        text: "Please fill all required fields correctly",
-        icon: "error",
-        confirmButtonText: "OK"
-      });
+      const firstError = Object.keys(errors)[0];
+      if (firstError) {
+        document.getElementById(firstError)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      // Prepare colorAndSizes array based on selected colors and sizes
-      const colorAndSizes = formData.color.flatMap(colorOption =>
-        formData.size.map(size => ({
-          color: colorMap[colorOption.name] || colorOption.name,
-          size: size,
-          photoCount: formData.images.filter((_, index) => {
-            // This is a simplified approach - you might need to adjust
-            // how you associate images with colors based on your UI
-            return true; // For now, just count all images
-          }).length
-        }))
-      );
-
-      // Create the product object according to the API structure
-      const product = {
-        productCode: formData.productCode,
-        subcategoryId: formData.category?.id,
-        price: formData.price,
-        gender: genderMap[formData.gender?.name ?? ""] || "UNISEX",
-        colorAndSizes: colorAndSizes,
-        createdAt: new Date().toISOString(),
-        offers: {
-          offerType: formData.offerType,
-          condition: formData.condition,
-          rentDuration: formData.offerType === "RENT" ? formData.rentDuration : undefined,
-        },
-      };
-
-      // Create FormData for the request
-      const submitFormData = new FormData();
-      submitFormData.append(
-        "product",
-        new Blob([JSON.stringify(product)], { type: "application/json" })
-      );
-
-      // Add all images to FormData
-      formData.images.forEach(file => {
-        submitFormData.append("images", file);
-      });
-
-      // Use the mutation hook to submit the data
-      const result = await addClothes(submitFormData).unwrap();
-
-      Swal.fire({
-        title: "Success!",
-        text: "Clothing item added successfully",
-        icon: "success",
-        confirmButtonText: "OK"
-      });
-
-      // Reset form
+      await submitProduct(formData);
+      alert("Məhsul inzibati təsdiq üçün göndərildi! Qeyd: Bu, müvəqqəti həll yoludur.");
       setFormData({
         category: null,
-        color: [],
         gender: null,
+        offerType: offerOptions[1],
+        condition: conditionOptions[0],
+        colors: [],
+        sizes: [],
         price: 0,
-        size: [],
         images: [],
-        offerType: "SALE",
-        condition: "FIRST_HAND",
         rentDuration: 1,
         productCode: generateProductCode(),
+        name: "",
+        surname: "",
+        email: "",
+        phone: "",
       });
-      setImagePreviews([]);
+      setErrors({});
       if (fileInputRef.current) fileInputRef.current.value = "";
-
-    } catch (error: any) {
-      let errorMessage = "Failed to add clothing item";
-      if (error.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error.status) {
-        errorMessage = `Server error: ${error.status}`;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      Swal.fire({
-        title: "Error!",
-        text: errorMessage,
-        icon: "error",
-        confirmButtonText: "OK"
-      });
+    } catch (error) {
+      console.error("Göndərmə xətası:", error);
+      alert("Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -275,156 +148,189 @@ const AddCloth = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            {/* Price */}
-            <div className="flex flex-col">
-              <label className="font-semibold mb-2 text-gray-700">Qiymət *</label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={e => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-purple-600"
+            <div>
+              <SelectButton
+                label="Kateqoriya"
+                options={categories}
+                selected={formData.category}
+                setSelected={cat => setFormData(prev => ({ ...prev, category: cat }))}
               />
-              {errors.price && <span className="text-red-500 text-sm mt-1">{errors.price}</span>}
+              {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
             </div>
 
-            {/* Offer Type */}
-            <div className="flex flex-col">
-              <label className="font-semibold mb-2 text-gray-700">Təklif Növü *</label>
-              <select
-                value={formData.offerType}
-                onChange={e => setFormData(prev => ({ 
-                  ...prev, 
-                  offerType: e.target.value as "RENT" | "SALE" 
-                }))}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-purple-600"
-              >
-                <option value="SALE">Satış</option>
-                <option value="RENT">Kirayə</option>
-              </select>
-            </div>
-
-            {/* Rent Duration (only for RENT) */}
-            {formData.offerType === "RENT" && (
-              <div className="flex flex-col">
-                <label className="font-semibold mb-2 text-gray-700">Kirayə Müddəti (gün) *</label>
-                <input
-                  type="number"
-                  value={formData.rentDuration}
-                  onChange={e => setFormData(prev => ({ 
-                    ...prev, 
-                    rentDuration: Number(e.target.value) 
-                  }))}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-purple-600"
-                />
-                {errors.rentDuration && <span className="text-red-500 text-sm mt-1">{errors.rentDuration}</span>}
-              </div>
-            )}
-
-            {/* Condition */}
-            <div className="flex flex-col">
-              <label className="font-semibold mb-2 text-gray-700">Vəziyyət *</label>
-              <select
-                value={formData.condition}
-                onChange={e => setFormData(prev => ({ 
-                  ...prev, 
-                  condition: e.target.value as "FIRST_HAND" | "SECOND_HAND" 
-                }))}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-purple-600"
-              >
-                <option value="FIRST_HAND">Yeni</option>
-                <option value="SECOND_HAND">İşlənmiş</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Image Upload */}
-          <div className="mb-8">
-            <label className="font-semibold mb-2 text-gray-700 block">
-              Şəkillər (Maksimum 10 ədəd) *
-            </label>
-
-            <div
-              className="border-2 border-dashed border-purple-600 rounded-xl p-8 text-center hover:bg-gray-50 transition cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
+            <div>
+              <SelectButton
+                label="Cinsiyyət"
+                options={genderOptions}
+                selected={formData.gender}
+                setSelected={g => setFormData(prev => ({ ...prev, gender: g }))}
               />
-              <p className="text-gray-500 mt-2">
-                Şəkilləri seçin və ya buraya sürükləyin
-              </p>
+              {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
             </div>
 
-            {imagePreviews.length > 0 && (
-              <div className="flex gap-4 flex-wrap mt-4">
-                {imagePreviews.map((img, i) => (
-                  <div key={i} className="relative w-24 h-24">
-                    <img src={img} alt="preview" className="w-full h-full object-cover rounded-lg" />
-                  </div>
+            <div>
+              <SelectButton
+                label="Təklif növü"
+                options={offerOptions}
+                selected={formData.offerType}
+                setSelected={o => setFormData(prev => ({ ...prev, offerType: o }))}
+              />
+            </div>
+
+            <div>
+              <SelectButton
+                label="Vəziyyət"
+                options={conditionOptions}
+                selected={formData.condition}
+                setSelected={c => setFormData(prev => ({ ...prev, condition: c }))}
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="colors">Rənglər</label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {colorOptions.map(color => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    onClick={() => {
+                      const isSelected = formData.colors.some(c => c.id === color.id);
+                      const newColors = isSelected
+                        ? formData.colors.filter(c => c.id !== color.id)
+                        : [...formData.colors, color];
+                      setFormData(prev => ({ ...prev, colors: newColors }));
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm ${formData.colors.some(c => c.id === color.id)
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-200 text-gray-800"
+                      }`}
+                  >
+                    {color.name}
+                  </button>
                 ))}
               </div>
-            )}
-            {errors.images && <span className="text-red-500 text-sm mt-1">{errors.images}</span>}
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <SelectButton
-              label="Kateqoriya"
-              selected={formData.category}
-              setSelected={option => setFormData(prev => ({ ...prev, category: option || null }))}
-              options={optionsForSelect.categories}
-            />
-            {errors.category && <span className="text-red-500 text-sm mt-1">{errors.category}</span>}
-
-            <SelectButton
-              label="Cins"
-              selected={formData.gender}
-              setSelected={option => setFormData(prev => ({ ...prev, gender: option || null }))}
-              options={optionsForSelect.genders}
-            />
-            {errors.gender && <span className="text-red-500 text-sm mt-1">{errors.gender}</span>}
-
-            <MultiSelectButton
-              label="Rənglər"
-              selected={formData.color}
-              setSelected={options => setFormData(prev => ({ ...prev, color: options }))}
-              options={optionsForSelect.colors}
-            />
-            {errors.color && <span className="text-red-500 text-sm mt-1">{errors.color}</span>}
-          </div>
-
-          {/* Sizes */}
-          <div className="mb-8">
-            <label className="font-semibold text-gray-700 block mb-2">Ölçülər *</label>
-            <div className="flex flex-wrap gap-4">
-              {["S", "M", "L", "XL", "XXL"].map(size => (
-                <label key={size} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    value={size}
-                    checked={formData.size.includes(size)}
-                    onChange={handleSizeChange}
-                    className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                  />
-                  {size}
-                </label>
-              ))}
+              {errors.colors && <p className="text-red-500 text-sm mt-1">{errors.colors}</p>}
             </div>
-            {errors.size && <span className="text-red-500 text-sm mt-1">{errors.size}</span>}
+
+            <div className="flex flex-col">
+              <label htmlFor="sizes">Ölçülər</label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {sizeOptions.map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      const newSizes = formData.sizes.includes(size)
+                        ? formData.sizes.filter(s => s !== size)
+                        : [...formData.sizes, size];
+                      setFormData(prev => ({ ...prev, sizes: newSizes }));
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm ${formData.sizes.includes(size)
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-200 text-gray-800"
+                      }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+              {errors.sizes && <p className="text-red-500 text-sm mt-1">{errors.sizes}</p>}
+            </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="price">Qiymət</label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                value={formData.price === 0 ? "" : formData.price}
+                onChange={e => {
+                  const value = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    price: value === "" ? 0 : parseFloat(value)
+                  }));
+                }}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+                min="0"
+                step="0.01"
+              />
+
+              {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+            </div>
+
+            {formData.offerType?.name === "KİRAYƏ" && (
+              <div className="flex flex-col">
+                <label htmlFor="rentDuration">Kirayə müddəti (gün)</label>
+                <input
+                  type="number"
+                  id="rentDuration"
+                  name="rentDuration"
+                  value={formData.rentDuration}
+                  onChange={e => setFormData(prev => ({ ...prev, rentDuration: Number(e.target.value) }))}
+                  className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+                  min="1"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+            <div className="flex flex-col">
+              <label htmlFor="name">Ad</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="surname">Soyad</label>
+              <input
+                type="text"
+                id="surname"
+                name="surname"
+                value={formData.surname}
+                onChange={handleChange}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+              />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="phone">Telefon</label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
+              />
+              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+            </div>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full py-3 rounded-full font-bold text-lg text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:shadow-lg hover:-translate-y-0.5 transition"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-full font-bold text-lg text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {isLoading ? "Adding..." : "Geyim Əlavə Et"}
+            {isSubmitting ? "Göndərilir..." : "Məhsulu Göndər"}
           </button>
         </form>
       </div>

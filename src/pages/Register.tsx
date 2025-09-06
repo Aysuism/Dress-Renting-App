@@ -17,7 +17,6 @@ const Register: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    // Clear error when user starts typing
     if (error) setError("");
   };
 
@@ -31,7 +30,6 @@ const Register: React.FC = () => {
       const res = await axios.post("http://localhost:8081/api/v1/auth/register", form);
       console.log("✅ Register success:", res.data);
       setSuccess(true);
-      // Reset form on success
       setForm({
         name: "",
         surname: "",

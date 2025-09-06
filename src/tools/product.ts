@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { Clothes } from "../components/Card";
 
 
 export const clothesApi = createApi({
@@ -15,16 +16,31 @@ export const clothesApi = createApi({
   }),
   tagTypes: ["Clothes"],
   endpoints: (build) => ({
-    // GET all clothes with optional filters
-    getClothes: build.query<any[], { offerType?: string; productCondition?: string }>({
+    getClothes: build.query<Clothes[], { offerType?: string; productCondition?: string }>({
       query: (params) => ({
-        url: "/get-by-Offer-Type", // Changed from "" to match your working endpoint
-        params: params, // Pass the query parameters
+        url: "/get-by-Offer-Type",
+        params: params,
+        responseHandler: (response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        },
       }),
       providesTags: ["Clothes"],
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && response.data && Array.isArray(response.data)) {
+          return response.data;
+        }
+        if (response && typeof response === 'object') {
+          return [response];
+        }
+        return [];
+      },
     }),
-
-    // ADD new clothes (multipart)
     addClothes: build.mutation({
       query: (formData: FormData) => ({
         url: "/upload",
@@ -42,9 +58,9 @@ const getTokenFromStorage = () => {
     .split('; ')
     .find(row => row.startsWith('token='))
     ?.split('=')[1];
-  
+
   if (cookieToken) return cookieToken;
-  
+
   // Try to get token from localStorage as fallback
   return localStorage.getItem('token');
 };
