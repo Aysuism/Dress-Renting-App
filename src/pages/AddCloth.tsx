@@ -1,339 +1,395 @@
-import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
-import { submitProduct } from '../tools/api';
-import type { Option, FormData } from "../tools/types";
-import SelectButton from "../components/SelectButton";
-
-const categories: Option[] = [
-  { id: 1, name: "Köynək" },
-  { id: 2, name: "Şalvar" },
-  { id: 3, name: "Ayaqqabı" },
-];
-
-const genderOptions: Option[] = [
-  { id: 1, name: "QADIN" },
-  { id: 2, name: "KİŞİ" },
-  { id: 3, name: "UŞAQ" },
-];
-
-const offerOptions: Option[] = [
-  { id: 1, name: "KİRAYƏ" },
-  { id: 2, name: "SATIŞ" },
-];
-
-const conditionOptions: Option[] = [
-  { id: 1, name: "BİRİNCİ ƏL" },
-  { id: 2, name: "İKİNCİ ƏL" },
-];
-
-const colorOptions: Option[] = [
-  { id: 1, name: "Qırmızı" },
-  { id: 2, name: "Yaşıl" },
-  { id: 3, name: "Mavi" },
-  { id: 4, name: "Qara" },
-  { id: 5, name: "Ağ" },
-  { id: 6, name: "Sarı" },
-  { id: 7, name: "Bənövşəyi" },
-  { id: 8, name: "Çəhrayı" },
-  { id: 9, name: "Narıncı" },
-  { id: 10, name: "Qəhvəyi" },
-];
-
-const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL"];
+import React, { useState } from 'react';
+import { optionLabels, options } from './Home';
+import SelectButton, { MultiSelectButton } from '../components/SelectButton';
+import { type Option } from '../tools/types';
+import { Link } from 'react-router';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { useAddClothesMutation } from '../tools/product';
+import { useDispatch } from 'react-redux';
+import { addPendingProduct } from '../tools/fakeApi';
+import Swal from 'sweetalert2';
 
 const generateProductCode = () => `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+const colorOptions = options.colors;
+const sizeOptions = options.sizes.map(size => size.name);
+
+// Gender-based categories
+const categoriesByGender: Record<string, string[]> = {
+  WOMAN: [
+    "Gəlinlik", "Ziyafət geyimi", "Don", "Köynək", "Bluz", "Şalvar",
+    "Ətək", "Şort", "Gödəkcə", "Palto", "Ayaqqabı", "Çanta", "Aksesuar", "Digər"
+  ],
+  MAN: [
+    "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"
+  ],
+  KID: [
+    "Don", "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"
+  ]
+};
+
+export interface FormDataState {
+  category: Option | null;
+  gender: Option | null;
+  offerTypes: Option | null;
+  condition: Option | null;
+  colors: Option[];
+  sizes: string[];
+  price: number;
+  rentDuration: number;
+  productCode: string;
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  images: File[];
+}
+
 const AddCloth = () => {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<FormDataState>({
     category: null,
     gender: null,
-    offerType: offerOptions[1],
-    condition: conditionOptions[0],
+    offerTypes: null,
+    condition: null,
     colors: [],
     sizes: [],
     price: 0,
-    images: [],
     rentDuration: 1,
     productCode: generateProductCode(),
     name: "",
     surname: "",
     email: "",
     phone: "",
+    images: []
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [addClothes] = useAddClothesMutation();
+  const dispatch = useDispatch();
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
-
-    if (!formData.category) newErrors.category = "Kateqoriya tələb olunur";
-    if (!formData.gender) newErrors.gender = "Cinsiyyət tələb olunur";
-    if (formData.colors.length === 0) newErrors.colors = "Ən azı bir rəng seçilməlidir";
-    if (formData.sizes.length === 0) newErrors.sizes = "Ən azı bir ölçü seçilməlidir";
-    if (formData.price <= 0) newErrors.price = "Qiymət 0-dan böyük olmalıdır";
-    if (!formData.name.trim()) newErrors.name = "Ad tələb olunur";
-    if (!formData.email.trim()) newErrors.email = "Email tələb olunur";
-    if (!formData.phone.trim()) newErrors.phone = "Telefon nömrəsi tələb olunur";
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = "Düzgün email ünvanı daxil edin";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    if (errors[name as keyof FormData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+  const handleSelectChange = (field: keyof FormDataState, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setFormData(prev => ({ ...prev, images: filesArray }));
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    dispatch(addPendingProduct(formData));
 
-    if (!validateForm()) {
-      const firstError = Object.keys(errors)[0];
-      if (firstError) {
-        document.getElementById(firstError)?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
+    const productRequestDto = {
+      productCode: formData.productCode,
+      subcategoryId: formData.category?.id ?? 0,
+      price: formData.price,
+      gender: formData.gender?.value ?? "",
+      userId: null,
+      colorAndSizes: formData.colors.map(color => ({
+        color: color.value,
+        photoCount: formData.images.length,
+        sizeStockMap: formData.sizes.reduce((acc, s) => {
+          acc[s] = 1;
+          return acc;
+        }, {} as Record<string, number>),
+        imageUrls: [],
+      })),
+      offers: [{
+        offerType: formData.offerTypes?.value ?? "SALE",
+        price: formData.price ?? 0,
+        productCondition: formData.condition?.value ?? "FIRST_HAND",
+      }]
+    };
+
+    const data = new FormData();
+    data.append("product", new Blob([JSON.stringify(productRequestDto)], { type: "application/json" }));
+    formData.images.forEach(file => data.append("images", file));
+
+    addClothes(data)
+      .unwrap()
+      .then(() => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Uğurla göndərildi!',
+          text: 'Məhsul inzibati təsdiq üçün göndərildi!',
         });
-      }
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await submitProduct(formData);
-      alert("Məhsul inzibati təsdiq üçün göndərildi! Qeyd: Bu, müvəqqəti həll yoludur.");
-      setFormData({
-        category: null,
-        gender: null,
-        offerType: offerOptions[1],
-        condition: conditionOptions[0],
-        colors: [],
-        sizes: [],
-        price: 0,
-        images: [],
-        rentDuration: 1,
-        productCode: generateProductCode(),
-        name: "",
-        surname: "",
-        email: "",
-        phone: "",
+        setFormData({
+          category: null,
+          gender: null,
+          offerTypes: null,
+          condition: null,
+          colors: [],
+          sizes: [],
+          price: 0,
+          rentDuration: 1,
+          productCode: generateProductCode(),
+          name: "",
+          surname: "",
+          email: "",
+          phone: "",
+          images: [],
+        });
+      })
+      .catch(err => {
+        console.error("Göndərmə xətası:", err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Xəta baş verdi',
+          text: 'Zəhmət olmasa yenidən cəhd edin.',
+        });
       });
-      setErrors({});
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (error) {
-      console.error("Göndərmə xətası:", error);
-      alert("Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white p-8 rounded-2xl shadow-lg">
-        <h2 className="text-3xl mb-8 text-center font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-          Yeni Geyim Əlavə Et
-        </h2>
+    <div className='py-10'>
+      <p className="mb-10 text-[#4A5565] text-[14px] flex items-center">
+        <Link to="/" className="hover:text-black">Əsas</Link>
+        <ChevronLeftIcon className="translate-y-[1px]" />
+        Məhsul Əlavə et
+      </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div>
+      <form onSubmit={handleSubmit} encType="multipart/form-data">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          <div className="flex flex-col">
+            <label htmlFor="name">Ad</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              placeholder='Ad'
+              onChange={handleChange}
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              required
+            />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="surname">Soyad</label>
+            <input
+              type="text"
+              id="surname"
+              name="surname"
+              value={formData.surname}
+              placeholder='Soyad'
+              onChange={handleChange}
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              required
+            />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="phone">Telefon</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              placeholder='+994'
+              onChange={handleChange}
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              required
+            />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              placeholder='example@gmail.com'
+              onChange={handleChange}
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              required
+            />
+          </div>
+        </div>
+        <div className="flex flex-col my-10 gap-5">
+          <label htmlFor="images">Şəkillər (Maksimum 3 ədəd) *</label>
+          <div
+            className="border-2 border-dashed border-black rounded-[16px] p-8 text-center cursor-pointer hover:bg-gray-50"
+            onClick={() => document.getElementById("images")?.click()}
+          >
+            <input
+              type="file"
+              id="images"
+              name="images"
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            <p>Şəkilləri seçin və ya buraya sürükləyin</p>
+          </div>
+
+          {/* Preview */}
+          {formData.images.length > 0 && (
+            <div className="flex gap-4 mt-4 flex-wrap">
+              {formData.images.map((file, idx) => {
+                const url = URL.createObjectURL(file);
+                return (
+                  <div key={idx} className="relative w-24 h-24">
+                    <img
+                      src={url}
+                      alt="preview"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
+                      onClick={() =>
+                        setFormData(prev => ({
+                          ...prev,
+                          images: prev.images.filter((_, i) => i !== idx),
+                        }))
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          <div className='col-span-1 sm:col-span-2 flex gap-5'>
+
+            <SelectButton
+              selected={formData.gender}
+              setSelected={item => handleSelectChange('gender', item)}
+              options={[
+                { id: 0, name: "Cins", value: "" },
+                ...options.genders.map(o => ({
+                  id: o.id,
+                  name: optionLabels[o.name] || o.name,
+                  value: o.name,
+                }))
+              ]}
+            />
+
+            {formData.gender && (
               <SelectButton
-                label="Kateqoriya"
-                options={categories}
                 selected={formData.category}
-                setSelected={cat => setFormData(prev => ({ ...prev, category: cat }))}
+                setSelected={item => handleSelectChange('category', item)}
+                options={[
+                  { id: 0, name: "Kateqoriya", value: "" },
+                  ...categoriesByGender[formData.gender.value as keyof typeof categoriesByGender].map((name, idx) => ({
+                    id: idx + 1,
+                    name,
+                    value: name,
+                  }))
+                ]}
               />
-              {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-            </div>
-
-            <div>
-              <SelectButton
-                label="Cinsiyyət"
-                options={genderOptions}
-                selected={formData.gender}
-                setSelected={g => setFormData(prev => ({ ...prev, gender: g }))}
-              />
-              {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
-            </div>
-
-            <div>
-              <SelectButton
-                label="Təklif növü"
-                options={offerOptions}
-                selected={formData.offerType}
-                setSelected={o => setFormData(prev => ({ ...prev, offerType: o }))}
-              />
-            </div>
-
-            <div>
-              <SelectButton
-                label="Vəziyyət"
-                options={conditionOptions}
-                selected={formData.condition}
-                setSelected={c => setFormData(prev => ({ ...prev, condition: c }))}
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor="colors">Rənglər</label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {colorOptions.map(color => (
-                  <button
-                    key={color.id}
-                    type="button"
-                    onClick={() => {
-                      const isSelected = formData.colors.some(c => c.id === color.id);
-                      const newColors = isSelected
-                        ? formData.colors.filter(c => c.id !== color.id)
-                        : [...formData.colors, color];
-                      setFormData(prev => ({ ...prev, colors: newColors }));
-                    }}
-                    className={`px-3 py-1 rounded-full text-sm ${formData.colors.some(c => c.id === color.id)
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-200 text-gray-800"
-                      }`}
-                  >
-                    {color.name}
-                  </button>
-                ))}
-              </div>
-              {errors.colors && <p className="text-red-500 text-sm mt-1">{errors.colors}</p>}
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor="sizes">Ölçülər</label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {sizeOptions.map(size => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => {
-                      const newSizes = formData.sizes.includes(size)
-                        ? formData.sizes.filter(s => s !== size)
-                        : [...formData.sizes, size];
-                      setFormData(prev => ({ ...prev, sizes: newSizes }));
-                    }}
-                    className={`px-3 py-1 rounded-full text-sm ${formData.sizes.includes(size)
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-200 text-gray-800"
-                      }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              {errors.sizes && <p className="text-red-500 text-sm mt-1">{errors.sizes}</p>}
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor="price">Qiymət</label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                value={formData.price === 0 ? "" : formData.price}
-                onChange={e => {
-                  const value = e.target.value;
-                  setFormData(prev => ({
-                    ...prev,
-                    price: value === "" ? 0 : parseFloat(value)
-                  }));
-                }}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-                min="0"
-                step="0.01"
-              />
-
-              {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
-            </div>
-
-            {formData.offerType?.name === "KİRAYƏ" && (
-              <div className="flex flex-col">
-                <label htmlFor="rentDuration">Kirayə müddəti (gün)</label>
-                <input
-                  type="number"
-                  id="rentDuration"
-                  name="rentDuration"
-                  value={formData.rentDuration}
-                  onChange={e => setFormData(prev => ({ ...prev, rentDuration: Number(e.target.value) }))}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-                  min="1"
-                />
-              </div>
             )}
+
+            <MultiSelectButton
+              options={[{ id: 0, name: "Rəng seçin", value: "" }, ...colorOptions.map(o => ({
+                id: o.id,
+                name: optionLabels[o.name] || o.name,
+                value: o.name,
+              }))]}
+              selected={formData.colors}
+              setSelected={(items) => setFormData(prev => ({ ...prev, colors: items }))}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div className="flex flex-col">
-              <label htmlFor="name">Ad</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="surname">Soyad</label>
-              <input
-                type="text"
-                id="surname"
-                name="surname"
-                value={formData.surname}
-                onChange={handleChange}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor="phone">Telefon</label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-600"
-              />
-              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+          <SelectButton
+            options={[{ id: 0, name: "İstifadə forması" }, ...options.offerTypes.map(o => ({
+              id: o.id,
+              name: optionLabels[o.name] || o.name,
+              value: o.name,
+            }))]}
+            selected={formData.offerTypes}
+            setSelected={item => handleSelectChange('offerTypes', item)}
+          />
+
+          <SelectButton
+            options={[{ id: 0, name: "Vəziyyət" }, ...options.conditions.map((o: any) => ({
+              id: o.id,
+              name: optionLabels[o.name] || o.name,
+              value: o.name,
+            }))]}
+            selected={formData.condition}
+            setSelected={item => handleSelectChange('condition', item)}
+          />
+
+          <div className="flex flex-col col-span-1 sm:col-span-2">
+            <label htmlFor="note">Qeyd</label>
+            <input
+              type="text"
+              id="note"
+              name="note"
+              // value={formData.note}
+              placeholder='Müştəriyə çatdırmaq istədiyiniz qeydi daxil edin...'
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="flex flex-col col-span-1 sm:col-span-2">
+            <label htmlFor="price">Qiymət</label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              value={formData.price === 0 ? "" : formData.price}
+              placeholder='0'
+              onChange={e => {
+                const value = e.target.value;
+                setFormData(prev => ({
+                  ...prev,
+                  price: value === "" ? 0 : parseFloat(value)
+                }));
+              }}
+              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col col-span-1 sm:col-span-2">
+            <label htmlFor="sizes">Ölçülər</label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {sizeOptions.map(size => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    const newSizes = formData.sizes.includes(size)
+                      ? formData.sizes.filter(s => s !== size)
+                      : [...formData.sizes, size];
+                    setFormData(prev => ({ ...prev, sizes: newSizes }));
+                  }}
+                  className={`w-[78px] py-2 rounded-lg text-sm cursor-pointer ${formData.sizes.includes(size)
+                    ? "bg-black text-white"
+                    : "bg-[#E5E7EB] text-[#4A5565]"
+                    }`}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
           </div>
 
+        </div>
+
+        <div className='text-end'>
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 rounded-full font-bold text-lg text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full md:w-[500px] h-[40px] rounded-lg font-bold text-lg text-white bg-black hover:bg-gray-800 transition-all disabled:opacity-50 cursor-pointer"
           >
-            {isSubmitting ? "Göndərilir..." : "Məhsulu Göndər"}
+            Məhsulu Göndər
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };

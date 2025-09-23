@@ -1,320 +1,208 @@
-import { useParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 import { useState } from "react";
-import PhoneIcon from '@mui/icons-material/Phone';
-import { Swiper, SwiperSlide, type SwiperClass } from "swiper/react";
-import { FreeMode, Thumbs } from "swiper/modules";
 import slugify from "slugify";
+import type { Product } from "../tools/types";
+import img from "../assets/img/jacket.jpg";
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import mailIcon from "../assets/img/mail-icon.webp"
+import phoneLightIcon from "../assets/img/phone-light-icon.webp"
+import phoneDarkIcon from "../assets/img/phone-dark-icon.webp"
 
-export const COLORS = [
-    { name: "Qırmızı", hex: "#FF0000" },
-    { name: "Yaşıl", hex: "#008000" },
-    { name: "Mavi", hex: "#0000FF" },
-    { name: "Sarı", hex: "#FFFF00" },
-    { name: "Qara", hex: "#000000" },
-    { name: "Ağ", hex: "#FFFFFF" },
-    { name: "Narıncı", hex: "#FFA500" },
-    { name: "Bənövşəyi", hex: "#800080" },
-    { name: "Çəhrayı", hex: "#FFC0CB" },
-    { name: "Boz", hex: "#808080" },
-];
-const localProducts = [
+const localProducts: Product[] = [
     {
-        id: "1",
-        category: { id: 1, name: "Don" },
-        gender: { id: 1, name: "Qadın" },
-        offerType: { id: 1, name: "Kirayə" },
-        condition: { id: 1, name: "FIRST_HAND" },
-        colors: [{ id: 1, name: "Qara", hex: COLORS.find(c => c.name === "Qara")?.hex || "#000000" }],
-        sizes: ["S", "M"],
-        price: 45,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"], // File array would be empty for demo
-        rentDuration: 7,
+        id: 1,
         productCode: "P-001",
-        name: "Aysu",
-        surname: "Ismayilzade",
-        email: "aysu@example.com",
-        phone: "0511234567",
-        status: "APPROVED"
-    },
-    {
-        id: "2",
-        category: { id: 2, name: "Kostyum" },
-        gender: { id: 2, name: "Kişi" },
-        offerType: { id: 1, name: "Kirayə" },
-        condition: { id: 2, name: "SECOND_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["M", "L", "XL"],
-        price: 85,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 5,
-        productCode: "P-002",
-        name: "Ali",
-        surname: "Hüseynov",
-        email: "ali@example.com",
-        phone: "0511234568",
-        status: "APPROVED"
-    },
-    {
-        id: "3",
-        category: { id: 1, name: "Don" },
-        gender: { id: 1, name: "Qadın" },
-        offerType: { id: 2, name: "Satış" },
-        condition: { id: 1, name: "FIRST_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["XS", "S", "M"],
-        price: 120,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 1, // Not used for sale but kept for structure
-        productCode: "P-003",
-        name: "Leyla",
-        surname: "Quliyeva",
-        email: "leyla@example.com",
-        phone: "0511234569",
-        status: "APPROVED"
-    },
-    {
-        id: "4",
-        category: { id: 1, name: "Don" },
-        gender: { id: 2, name: "Kişi" },
-        offerType: { id: 2, name: "Satış" },
-        condition: { id: 2, name: "SECOND_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["L", "XL", "XXL"],
-        price: 55,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 1,
-        productCode: "P-004",
-        name: "Nermin",
-        surname: "Memmedova",
-        email: "nermin@example.com",
-        phone: "0511234570",
-        status: "APPROVED"
-    },
-    {
-        id: "5",
-        category: { id: 1, name: "Don" },
-        gender: { id: 3, name: "Uşaq" },
-        offerType: { id: 1, name: "Kirayə" },
-        condition: { id: 1, name: "FIRST_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["S", "M"],
-        price: 25,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 3,
-        productCode: "P-005",
-        name: "Emil",
-        surname: "Ceferov",
-        email: "emil@example.com",
-        phone: "0511234571",
-        status: "APPROVED"
-    },
-    {
-        id: "6",
-        category: { id: 2, name: "Kostyum" },
-        gender: { id: 1, name: "Qadın" },
-        offerType: { id: 1, name: "Kirayə" },
-        condition: { id: 1, name: "FIRST_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["M", "L"],
-        price: 95,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 10,
-        productCode: "P-006",
-        name: "Günay",
-        surname: "Rzayeva",
-        email: "gunay@example.com",
-        phone: "0511234572",
-        status: "APPROVED"
-    },
-    {
-        id: "7",
-        category: { id: 1, name: "Don" },
-        gender: { id: 2, name: "Kişi" },
-        offerType: { id: 2, name: "Satış" },
-        condition: { id: 2, name: "SECOND_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
-        ],
-        sizes: ["XL", "XXL"],
+        category: { id: 11, name: "Don" },
+        subcategoryId: 11,
         price: 75,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 1,
-        productCode: "P-007",
-        name: "Orxan",
-        surname: "Veliyev",
-        email: "orxan@example.com",
-        phone: "0511234573",
-        status: "APPROVED"
+        gender: "WOMAN",
+        user: {
+            id: 101,
+            name: "Aysu",
+            surname: "Ismayilzade",
+            email: "aysu@example.com",
+            phone: "+994511234567",
+            userRole: "USER",
+        },
+        colorAndSizes: [
+            {
+                id: 201,
+                color: "BLACK",
+                photoCount: 2,
+                stock: 5,
+                imageUrls: [img, "https://picsum.photos/300/400?random=1"],
+                sizeStockMap: { S: 2, M: 2, L: 1 },
+            },
+            {
+                id: 202,
+                color: "WHITE",
+                photoCount: 1,
+                stock: 3,
+                imageUrls: ["https://picsum.photos/300/400?random=3"],
+                sizeStockMap: { M: 2, XL: 1 },
+            },
+        ],
+        createdAt: "2025-09-11T12:00:00Z",
+        offers: [
+            { id: 302, offerTypes: "SALE", price: 120, productCondition: "FIRST_HAND" },
+        ],
+        status: "ACTIVE",
     },
     {
-        id: "8",
-        category: { id: 1, name: "Don" },
-        gender: { id: 1, name: "Qadın" },
-        offerType: { id: 1, name: "Kirayə" },
-        condition: { id: 1, name: "FIRST_HAND" },
-        colors: [
-            { id: 5, name: "Ağ", hex: COLORS.find(c => c.name === "Ağ")?.hex || "#FFFFFF" },
-            { id: 2, name: "Mavi", hex: COLORS.find(c => c.name === "Mavi")?.hex || "#0000FF" }
+        id: 2,
+        productCode: "P-002",
+        category: { id: 12, name: "Kostyum" },
+        subcategoryId: 12,
+        price: 60,
+        gender: "MAN",
+        user: {
+            id: 102,
+            name: "Ali",
+            surname: "Hüseynov",
+            email: "ali@example.com",
+            phone: "+994501112233",
+            userRole: "USER",
+        },
+        colorAndSizes: [
+            {
+                id: 203,
+                color: "BLUE",
+                photoCount: 1,
+                stock: 4,
+                imageUrls: ["https://picsum.photos/300/400?random=4"],
+                sizeStockMap: { M: 2, L: 2 },
+            },
         ],
-        sizes: ["S", "M", "L"],
-        price: 38,
-        images: ["https://i.pinimg.com/736x/0c/4f/c6/0c4fc62d6d205d2ab33620bf4e590a15.jpg", "https://mauiofficial.com/img/p/4/2/6/0/4260.jpg"],
-        rentDuration: 7,
-        productCode: "P-008",
-        name: "Sevinc",
-        surname: "Eliyeva",
-        email: "sevinc@example.com",
-        phone: "0511234574",
-        status: "APPROVED"
-    }
+        createdAt: "2025-09-09T09:00:00Z",
+        offers: [
+            { id: 303, offerTypes: "RENT", price: 20, rentDuration: 5, productCondition: "SECOND_HAND" },
+        ],
+        status: "ACTIVE",
+    },
 ];
 
 const ProductDetails: React.FC = () => {
     const { urlid } = useParams<{ urlid: string }>();
-    const [thumbsSwiper, setThumbsSwiper] = useState<SwiperClass | null>(null);
+    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState(0);
 
-    const product = localProducts.find(
-        (p) => slugify(String(p.id), { lower: true }) === urlid
-    );
+    const product = localProducts.find(p => slugify(String(p.id), { lower: true }) === urlid);
 
-    if (!product) return <div className="alert alert-warning">Paltar tapılmadı</div>;
+    if (!product) return <Navigate to="/not-found" replace />;
 
-    const { category, gender, colors, sizes, images } = product;
+    const mainColorSize = product.colorAndSizes[0];
+    const images = mainColorSize?.imageUrls || [];
+    const colors = product.colorAndSizes.map(item => item.color);
+    const sizeStockMap = mainColorSize?.sizeStockMap || {};
+    const offer = product.offers[0];
+    const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
     return (
-        <div className="py-8 px-4">
-            <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
-                    {/* Images */}
-                    <div className="space-y-4">
-                        <div className="relative rounded-2xl overflow-hidden shadow-lg h-96 bg-gradient-to-br from-blue-50 to-purple-50">
-                            <Swiper
-                                loop={images.length > 1}
-                                spaceBetween={10}
-                                thumbs={{ swiper: thumbsSwiper }}
-                                modules={[FreeMode, Thumbs]}
-                                className="h-full"
-                            >
-                                {images.length > 0 ? (
-                                    images.map((img, idx) => (
-                                        <SwiperSlide key={idx}>
-                                            <img src={img} alt={product.name} className="w-full h-full object-cover" />
-                                        </SwiperSlide>
-                                    ))
-                                ) : (
-                                    <SwiperSlide>
-                                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
-                                            Şəkil yoxdur
-                                        </div>
-                                    </SwiperSlide>
-                                )}
-                            </Swiper>
-                        </div>
+        <div className="py-10 max-w-6xl ">
+            <p className="mb-4 text-[#4A5565] text-[14px] flex items-center">
+                <Link to="/" className="hover:text-black">Əsas</Link>
+                <ChevronLeftIcon className="translate-y-[1px]" />
+                Məhsul Detalı
+            </p>
 
-                        {/* Thumbnail slider */}
-                        <Swiper
-                            onSwiper={setThumbsSwiper}
-                            loop={images.length > 1}
-                            spaceBetween={12}
-                            slidesPerView={Math.min(images.length, 4)}
-                            freeMode
-                            watchSlidesProgress
-                            modules={[FreeMode, Thumbs]}
-                            className="thumbnail-slider"
-                        >
-                            {images.length > 0 && images.map((img, idx) => (
-                                <SwiperSlide key={idx} className="cursor-pointer">
-                                    <div className="rounded-xl overflow-hidden border-2 border-transparent transition-all duration-200 hover:border-purple-400 h-20">
-                                        <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
-                                    </div>
-                                </SwiperSlide>
-                            ))}
-                        </Swiper>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Images */}
+                <div>
+                    <div className="mb-4 border border-gray-400 rounded-lg overflow-hidden">
+                        <img
+                            src={images[selectedImage] || img}
+                            alt={product.user.name}
+                            className="w-full h-[400px] object-cover"
+                        />
                     </div>
 
-                    {/* Product Info */}
-                    <div className="flex flex-col space-y-6">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{product.name} {product.surname}</h1>
-                            <div className="flex items-baseline mt-2">
-                                <span className="text-3xl font-extrabold text-purple-500">{product.price} AZN</span>
-                                {product.offerType.name === "Kirayə" && <span className="ml-1 text-sm text-gray-500">/gün</span>}
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {images.map((img, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setSelectedImage(idx)}
+                                className={`rounded-md overflow-hidden ${selectedImage === idx ? 'border border-gray-300' : ''}`}
+                            >
+                                <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-16 object-cover" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                        {/* Category & Gender */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Kateqoriya</p>
-                                <p className="text-lg font-medium text-gray-900">{category.name}</p>
-                            </div>
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cins</p>
-                                <p className="text-lg font-medium text-gray-900">{gender.name}</p>
-                            </div>
+                {/* Product Info */}
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-semibold">{product.category.name}</h1>
+                        <div className="flex items-baseline mt-2">
+                            <span className="text-2xl font-semibold">{product.price} AZN</span>
+                            {offer?.offerTypes === "RENT" && <span className="ml-1 text-2xl font-semibold">/ {product.offers[0]?.rentDuration || 0} gün</span>}
                         </div>
+                    </div>
 
-                        {/* Colors */}
-                        <div className="flex gap-3">
-                            {colors.map((c) => (
+
+                    {/* Colors */}
+                    <div className="flex">
+                        <p className="text-[20px] font-medium mr-3">Rəng:</p>
+                        <div className="flex gap-2">
+                            {colors.map((color, idx) => (
                                 <div
-                                    key={c.id}
-                                    className="w-10 h-10 rounded-full border-2 border-gray-300"
-                                    style={{ backgroundColor: c.hex }}
+                                    key={idx}
+                                    className="w-8 h-8 rounded-full border border-gray-300"
+                                    style={{ backgroundColor: color.toLowerCase() }}
+                                    title={color}
                                 ></div>
                             ))}
                         </div>
+                    </div>
 
+                    {/* Sizes */}
+                    <div className="flex flex-wrap gap-2 my-10">
+                        {allSizes.map((size) => {
+                            const inStock = sizeStockMap[size] > 0;
+                            return (
+                                <button key={size} disabled={!inStock} onClick={() => setSelectedSize(size)} className={`w-[72px] h-[42px] rounded-md font-medium
+                                            ${inStock ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`} >
+                                    {size}
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                        {/* Sizes */}
-                        <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-3">Ölçü seçimi</p>
-                            <div className="flex flex-wrap gap-2">
-                                {sizes.map((size) => (
-                                    <button
-                                        key={size}
-                                        className="w-12 h-12 flex items-center justify-center rounded-lg font-semibold transition-all bg-purple-200 text-purple-700 border border-purple-400"
+                    {/* Product Note */}
+                    <div>
+                        <span className="font-semibold">Qeyd</span>
+                        <p className="mt-2">Bu pencək gündəlik geyim və ya xüsusi tədbirlər üçün ideal seçimdir. Keyfiyyətli materialdan hazırlandığı üçün həm rahat, həm də davamlıdır. Məhsul yalnız həftə içi mövcuddur və şəhər daxili çatdırılma ilə təhvil verilir.</p>
+                    </div>
+
+                    {/* Offers */}
+                    <div className="flex gap-3 items-center">
+                        <span className="font-semibold">İstifadə forması:</span>
+                        <div className="flex gap-2">
+                            {["RENT", "SALE"].map((type) => {
+                                const exists = product.offers.some((o) => o.offerTypes === type);
+                                return (
+                                    <div
+                                        key={type}
+                                        className={`w-[72px] h-[42px] flex items-center justify-center rounded-md font-medium
+                                                  ${exists ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}
                                     >
-                                        {size}
-                                    </button>
-                                ))}
-                            </div>
+                                        {type === "RENT" ? "İcarə" : "Satış"}
+                                    </div>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        {/* Contact Info */}
-                        <div className="space-y-4 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-100">
-                            <p className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
-                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                                </svg>
-                                Əlaqə məlumatları
-                            </p>
-                            <p className="text-blue-900 font-medium mb-0">{product.name} {product.surname}</p>
-                            <p className="text-blue-900 font-medium">{product.email}</p>
-                            <button className="w-full flex items-center justify-center gap-3 font-semibold py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 hover:from-purple-100 hover:to-pink-100 hover:border-purple-300 transition-all duration-300">
-                                <div className="bg-purple-100 p-2 rounded-full">
-                                    <PhoneIcon className="h-5 w-5 text-purple-600" />
-                                </div>
-                                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{product.phone}</span>
-                            </button>
-                        </div>
+
+                    {/* Contact Info */}
+                    <div className="bg-white p-4 rounded-lg border border-gray-300">
+                        <p className="mb-1 font-semibold">{product.user.name} {product.user.surname}</p>
+                        <a href={`mailto:${product.user.email}`} className="mb-3 flex gap-2"><img src={mailIcon} alt="mail-icon" className="w-[18px] h-[14px] translate-y-[7px]" />{product.user.email}</a>
+                        <a href={`tel:${product.user.phone}`} className="group flex items-center justify-center gap-3 h-[48px] bg-black text-white p-3 rounded-lg border-2 hover:bg-white hover:text-black transition-all duration-300">
+                            <img src={phoneLightIcon} alt="phoneIcon" className="w-5 h-5 block group-hover:hidden" />
+                            <img src={phoneDarkIcon} alt="phoneIcon" className="w-5 h-5 hidden group-hover:block" />
+                            {product.user.phone}
+                        </a>
                     </div>
                 </div>
             </div>

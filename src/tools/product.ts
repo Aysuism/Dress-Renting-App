@@ -1,46 +1,17 @@
+// tools/product.ts - UPDATED with Admin endpoints
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type { Clothes } from "../components/Card";
-
 
 export const clothesApi = createApi({
   reducerPath: "clothesApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:8081/api/v1/products",
-    prepareHeaders: (headers, { getState }) => {
-      const token = getTokenFromStorage();
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
+    prepareHeaders: (headers) => {
+      headers.delete("Content-Type"); // Let browser handle FormData
       return headers;
     },
   }),
   tagTypes: ["Clothes"],
   endpoints: (build) => ({
-    getClothes: build.query<Clothes[], { offerType?: string; productCondition?: string }>({
-      query: (params) => ({
-        url: "/get-by-Offer-Type",
-        params: params,
-        responseHandler: (response) => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
-        },
-      }),
-      providesTags: ["Clothes"],
-      transformResponse: (response: any) => {
-        if (Array.isArray(response)) {
-          return response;
-        }
-        if (response && response.data && Array.isArray(response.data)) {
-          return response.data;
-        }
-        if (response && typeof response === 'object') {
-          return [response];
-        }
-        return [];
-      },
-    }),
     addClothes: build.mutation({
       query: (formData: FormData) => ({
         url: "/upload",
@@ -49,20 +20,29 @@ export const clothesApi = createApi({
       }),
       invalidatesTags: ["Clothes"],
     }),
+
+    // Admin: Get all pending products
+    getPendingProducts: build.query<any[], void>({
+      query: () => "/pending",
+      providesTags: ["Clothes"],
+    }),
+
+    // Admin: Update product status
+    updateProductStatus: build.mutation<any, { productCode: string; status: "ACTIVE" | "REJECTED" }>({
+      query: ({ productCode, status }) => ({
+        url: `/${productCode}/upload`,
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: { status },
+      }),
+      invalidatesTags: ["Clothes"],
+    }),
+
   }),
 });
-// Helper function to get token from storage
-const getTokenFromStorage = () => {
-  // Try to get token from cookies
-  const cookieToken = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('token='))
-    ?.split('=')[1];
 
-  if (cookieToken) return cookieToken;
-
-  // Try to get token from localStorage as fallback
-  return localStorage.getItem('token');
-};
-
-export const { useGetClothesQuery, useAddClothesMutation } = clothesApi;
+export const {
+  useAddClothesMutation,
+  useGetPendingProductsQuery,
+  useUpdateProductStatusMutation,
+} = clothesApi;

@@ -1,6 +1,8 @@
 import { useWishlist } from "react-use-wishlist";
 import WishlistCard from "../components/WishlistCard";
 import type { Item } from "react-use-wishlist";
+import { Link } from "react-router";
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 interface WishlistData extends Item {
   category: string;
@@ -19,24 +21,26 @@ const Wishlist = () => {
   ) as WishlistData[];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <h2 className="text-center text-2xl font-bold my-10 text-[#8b5cf6]">
-        Sevimli Geyimlər
-      </h2>
+    <div className="min-h-screen flex flex-col py-10">
+      <p className="mb-4 text-[#4A5565] text-[14px] flex items-center">
+        <Link to="/" className="hover:text-black">Əsas</Link>
+        <ChevronLeftIcon className="translate-y-[1px]" />
+        Sevimlilər
+      </p>
 
       {favItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10">
           <img
-            src="/no_wish_list-removebg-preview.png"
+            src="https://www.emp.co.uk/on/demandware.static/Sites-GLB-Site/-/default/dwd1d465d0/images/logos/empty-cart.gif"
             alt="no-item"
-            className="w-48 h-48 object-contain mb-4"
+            className="mb-4"
           />
           <h1 className="text-lg font-semibold text-gray-700">
             İstək siyahınız boşdur!
           </h1>
         </div>
       ) : (
-        <div className="flex flex-col gap-4 px-4 sm:px-6 md:px-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {favItems.map((item) => (
             <WishlistCard key={item.id} wishListData={item} />
           ))}

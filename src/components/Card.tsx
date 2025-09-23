@@ -2,45 +2,39 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useWishlist } from "react-use-wishlist";
 import slugify from "slugify";
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
+import listIcon from "../assets/img/product-details-icon.webp";
+import { type Product } from "../tools/types";
 
-export interface Clothes {
-  id: number;
-  name: string;
-  surname: string;
-  email: string;
-  phone: string;
-  category: { id: number; name: string };
-  gender: { id: number; name: string };
-  offerType: { id: number; name: string };
-  condition: { id: number; name: string };
-  colors: { id: number; name: string; hex: string }[];
-  sizes: string[];
-  price: number;
-  rentDuration: number;
-  productCode: string;
-  images: string[];
-  status: string;
-}
+const note = "Qeyd: Məhsul yalnız həftə içi mövcuddur, şəhər daxili çatdırılma ilə.";
 
 interface CardProps {
-  clothes: Clothes;
+  clothes: Product;
 }
+
+// Map backend offer types to Azerbaijani
+const offerTypeMap: Record<string, string> = {
+  RENT: "Kirayə",
+  SALE: "Satış",
+};
 
 const Card: React.FC<CardProps> = ({ clothes }) => {
   const { addWishlistItem, removeWishlistItem, inWishlist } = useWishlist();
 
+  const mainColorSize = clothes.colorAndSizes[0];
+
   const wishlistItem = {
     id: clothes.id.toString(),
-    name: clothes.name,
+    name: clothes.user.name,
     price: clothes.price,
-    image: clothes.images[0] || "",
+    image: mainColorSize?.imageUrls[0] || "",
     category: clothes.category.name,
-    colors: [...clothes.colors],
-    sizes: [...clothes.sizes],
-    rentDuration: clothes.rentDuration,
-    offerType: clothes.offerType.name,
+    colors: clothes.colorAndSizes.map(cs => cs.color),
+    sizes: Object.keys(mainColorSize?.sizeStockMap || {}),
+    rentDuration: clothes.offers[0]?.rentDuration || 0,
+    offerType: clothes.offers[0]?.offerTypes,
   };
-
 
   const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -53,44 +47,66 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
   };
 
   return (
-    <Link to={`/${slugify(String(clothes.id), { lower: true })}`}
-      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer">
-      <div className="relative h-52 bg-gray-200 flex items-center justify-center">
+    <Link
+      to={`/${slugify(String(clothes.id), { lower: true })}`}
+      className="bg-white rounded-2xl border border-[#D1D5DC] cursor-pointer p-4"
+    >
+      <div className="relative w-full h-[231px]">
         <img
-          src={clothes.images[0] || ""}
-          alt={clothes.name}
-          className="object-cover w-full h-full"
+          src={mainColorSize?.imageUrls[0] || ""}
+          alt={clothes.user.name}
+          className="object-contain w-full h-full rounded-2xl"
         />
 
         <button
-          className={`absolute top-2 right-2 p-2 bg-white rounded-full text-xl ${inWishlist(clothes.id.toString()) ? "text-red-500" : "text-gray-300"
+          className={`absolute top-2 right-2 p-2 text-xl cursor-pointer ${inWishlist(clothes.id.toString()) ? "text-red-500" : "text-gray-300"
             }`}
           onClick={toggleWishlist}
         >
-          {inWishlist(clothes.id.toString()) ? "❤️" : "🤍"}
+          {inWishlist(clothes.id.toString())
+            ? <FavoriteIcon className="text-black" />
+            : <FavoriteBorderOutlinedIcon className="text-black" />}
         </button>
       </div>
 
-      <div className="p-4">
-        {/* <div className="text-gray-700 font-semibold">
-          {clothes.name} {clothes.surname}
-        </div> */}
-        <div className="text-purple-500 font-bold">{clothes.price} AZN/gün</div>
-        <div className="text-gray-500 text-sm mt-1">
-          <span>Ölçü: {clothes.sizes.join(", ")}</span>
-          <span className="ml-3">Cins: {clothes.gender.name}</span>
+      <div className="mt-4 grid gap-2 text-[16px]">
+        {/* Name & Price */}
+        <div className="font-[600] text-right">
+          <span>{clothes.price} AZN</span>
         </div>
-        <div className="text-gray-400 text-sm mt-1">
-          Kateqoriya: {clothes.category.name} | Rəng: {clothes.colors.map(c => c.name).join(", ")}
+
+        {/* Category & Offer Type */}
+        <div className="grid grid-cols-2">
+          <span>Kateqoriya: {clothes.category.name}</span>
+          <span className="text-right">
+            İstifadə forması: {offerTypeMap[clothes.offers[0]?.offerTypes || ""] || "-"}
+          </span>
         </div>
-        <div className="text-gray-400 text-sm mt-1">
-          Kod: {clothes.productCode} | Müddət: {clothes.rentDuration} gün
+
+
+        {/* Size & Color */}
+        <div className="grid grid-cols-2">
+          <span>Ölçü: {Object.keys(mainColorSize?.sizeStockMap || {}).join(", ")}</span>
+          <span className="flex items-center justify-end gap-2">
+            Rəng:
+            {clothes.colorAndSizes.map((item: any) => (
+              <span
+                key={item.id}
+                className="w-5 h-5 rounded-full border border-gray-300"
+                style={{ backgroundColor: item.color }}
+              />
+            ))}
+          </span>
         </div>
-        <div className="text-gray-400 text-sm mt-1">
-          Email: {clothes.email} | Telefon: {clothes.phone}
-        </div>
-        <div className="text-gray-400 text-sm mt-1">
-          Təklif: {clothes.offerType.name} | Vəziyyət: {clothes.condition.name} | Status: {clothes.status}
+
+        {/* Note */}
+        <div className="grid grid-cols-[16px_1fr] items-start gap-3">
+          <img
+            src={listIcon}
+            alt="details-icon"
+            className="w-[16px] object-contain mt-1"
+          />
+          <p>{note.slice(0, 40)}...</p>
         </div>
       </div>
     </Link>

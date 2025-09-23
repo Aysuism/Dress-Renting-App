@@ -1,7 +1,11 @@
 import React from "react";
 import { useWishlist } from "react-use-wishlist";
 import type { Item } from "react-use-wishlist";
-import DeleteIcon from "@mui/icons-material/Delete";
+import listIcon from "../assets/img/product-details-icon.webp";
+import { Link } from "react-router";
+import slugify from "slugify";
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 
 interface ColorOption {
     id: number;
@@ -22,81 +26,90 @@ interface WishlistCardProps {
     wishListData: WishlistData;
 }
 
-const WishlistCard: React.FC<WishlistCardProps> = ({ wishListData }) => {
-    const { removeWishlistItem } = useWishlist();
-    console.log(wishListData);
+const note = "Qeyd: Məhsul yalnız həftə içi mövcuddur, şəhər daxili çatdırılma ilə.";
 
-    const handleRemove = (e: React.MouseEvent<HTMLButtonElement>) => {
+const WishlistCard: React.FC<WishlistCardProps> = ({ wishListData }) => {
+    const { removeWishlistItem, inWishlist } = useWishlist();
+
+    const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault();
         e.stopPropagation();
-        removeWishlistItem(wishListData.id);
+        if (inWishlist(wishListData.id.toString())) {
+            removeWishlistItem(wishListData.id.toString());
+        }
     };
 
     return (
-        <div className="w-full bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-6 mb-6 flex flex-col md:flex-row items-start hover:shadow-2xl hover:-translate-y-1 transform transition-all duration-500 group">
+        <Link
+            to={`/${slugify(String(wishListData.id), { lower: true })}`}
+            className="bg-white rounded-2xl border border-[#D1D5DC] cursor-pointer p-4"
+        >
             {/* Image */}
-            <div className="md:w-1/4 mb-4 md:mb-0 flex justify-center">
+            <div className="relative w-full h-[231px]">
                 <img
                     src={wishListData.image}
                     alt={wishListData.category}
-                    className="w-full h-52 object-cover rounded-xl border border-gray-200 shadow-sm transition-transform duration-500 group-hover:scale-105"
+                    className="object-contain w-full h-full rounded-2xl"
                 />
+
+                <button
+                    className={`absolute top-2 right-2 p-2 text-xl cursor-pointer ${inWishlist(wishListData.id.toString())
+                            ? "text-red-500"
+                            : "text-gray-300"
+                        }`}
+                    onClick={toggleWishlist}
+                >
+                    {inWishlist(wishListData.id.toString()) ? (
+                        <FavoriteIcon className="text-black" />
+                    ) : (
+                        <FavoriteBorderOutlinedIcon className="text-black" />
+                    )}
+                </button>
             </div>
 
-            {/* Info */}
-            <div className="md:w-3/4 md:px-6 flex flex-col justify-between w-full">
-                <div className="flex justify-between items-start">
-                    {/* Name */}
-                    <h3 className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors duration-300">
-                        {wishListData.name}
-                    </h3>
-
-                    {/* Price */}
-                    <div className="text-2xl font-extrabold text-purple-600">
-                        ${wishListData.price}
+            <div className="mt-4 grid gap-2 text-[16px]">
+                {/* Name & Price */}
+                <div className="grid grid-cols-2 items-center">
+                    <p className="font-[500]">{wishListData.name}</p>
+                    <div className="font-[600] text-right">
+                        {wishListData.price} AZN / {wishListData.rentDuration} gün
                     </div>
-
-                    {/* Delete Button */}
-                    <button
-                        onClick={handleRemove}
-                        className="ml-4 p-2 text-red-500 hover:bg-red-100 rounded-full transition-colors duration-300 flex items-center justify-center shadow hover:shadow-md"
-                        aria-label="Sil"
-                    >
-                        <DeleteIcon />
-                    </button>
                 </div>
 
-                <div className="mt-4 space-y-2 text-gray-600">
-                    <p>
-                        <span className="font-semibold">Kateqoriya:</span> {wishListData.category}
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold">Rəng:</span>
-                        {wishListData.colors?.map((c: any) => (
-                            <div
+                {/* Category & Offer Type */}
+                <div className="grid grid-cols-2">
+                    <span>Kateqoriya: {wishListData.category}</span>
+                    <span className="text-right">İstifadə forması: {wishListData.offerType}</span>
+                </div>
+
+                {/* Size & Color */}
+                <div className="grid grid-cols-2">
+                    <span>Ölçü: {wishListData.sizes?.length ? wishListData.sizes.join(", ") : "Yoxdur"}</span>
+                    <span className="flex items-center justify-end gap-2">
+                        Rəng:
+                        {wishListData.colors?.map((c) => (
+                            <span
                                 key={c.id}
-                                className="w-6 h-6 rounded-full border border-gray-300"
+                                className="w-5 h-5 rounded-full border border-gray-300"
                                 style={{ backgroundColor: c.hex }}
                                 title={c.name}
-                            ></div>
+                            />
                         ))}
-                    </div>
+                    </span>
+                </div>
 
-                    <p>
-                        <span className="font-semibold">Ölçü:</span>{" "}
-                        {wishListData.sizes?.length ? wishListData.sizes.join(", ") : "Yoxdur"}
-                    </p>
-
-                    <p>
-                        <span className="font-semibold">Müddət:</span> {wishListData.rentDuration} gün
-                    </p>
-                    <p>
-                        <span className="font-semibold">Təklif:</span> {wishListData.offerType}
-                    </p>
+                {/* Note */}
+                <div className="grid grid-cols-[16px_1fr] items-start gap-3">
+                    <img
+                        src={listIcon}
+                        alt="details-icon"
+                        className="w-[16px] object-contain mt-1"
+                    />
+                    <p>{note.slice(0, 40)}...</p>
                 </div>
             </div>
-        </div>
-
+        </Link>
     );
 };
 
-export default WishlistCard
+export default WishlistCard;
