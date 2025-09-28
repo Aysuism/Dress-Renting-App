@@ -8,7 +8,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [cookies, setCookie] = useCookies<any>(["token", "refreshToken"]);
+  const [_cookies, setCookie] = useCookies<any>(["token", "refreshToken"]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

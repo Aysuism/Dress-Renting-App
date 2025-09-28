@@ -83,7 +83,7 @@ const localProducts: Product[] = [
 
 const ProductDetails: React.FC = () => {
     const { urlid } = useParams<{ urlid: string }>();
-    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+    const [_selectedSize, setSelectedSize] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState(0);
 
     const product = localProducts.find(p => slugify(String(p.id), { lower: true }) === urlid);
