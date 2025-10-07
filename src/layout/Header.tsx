@@ -5,9 +5,10 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/img/logo.webp";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import Swal from "sweetalert2";
-import { categoriesByGender, optionLabels, products } from "../pages/Home";
+import { categoriesByGender, optionLabels } from "../pages/Home";
 import slugify from "slugify";
 import Fuse from "fuse.js";
+import { useGetProductsQuery } from "../tools/product";
 
 export interface HeaderProps {
   showSection: (section: string) => void;
@@ -21,6 +22,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
+  const { data: products = [] } = useGetProductsQuery(undefined);
 
   useEffect(() => {
     const checkUser = () => {
@@ -59,21 +61,29 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
     setSidebarOpen(false);
   };
 
-  const fuseData = products.map(p => ({
-    ...p,
-    searchText: [
-      // EN
-      p.category.name,
-      p.gender,
-      ...p.colorAndSizes.map(c => c.color),
-      // AZ
-      optionLabels[p.gender], // AZ gender
-      categoriesByGender[p.gender].includes(optionLabels[p.category.name])
-        ? optionLabels[p.category.name]
-        : p.category.name,   // AZ category if exists, fallback EN
-      ...p.colorAndSizes.map(c => optionLabels[c.color]) // AZ colors
-    ].join(" ").toLowerCase()
-  }));
+const fuseData = products.map((p: any) => {
+  const gender = p.gender;
+  const categoryName = p.category?.name ?? p.category; // if p.category is an object or string
+
+  // Safe check
+  const categoriesForGender = gender && categoriesByGender[gender] ? categoriesByGender[gender] : [];
+
+  const searchText = [
+    categoryName,
+    gender,
+    ...p.colorAndSizes.map((c: any) => c.color),
+    optionLabels[gender] ?? "",
+    categoriesForGender.includes(optionLabels[categoryName] ?? "")
+      ? optionLabels[categoryName]
+      : categoryName,
+    ...p.colorAndSizes.map((c: any) => optionLabels[c.color] ?? c.color)
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return { ...p, searchText };
+});
 
   const fuse = new Fuse(fuseData, {
     keys: ["searchText"],
@@ -131,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
           {showResults && filteredProducts.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
               <ul className="divide-y divide-gray-200">
-                {filteredProducts.map((item) => (
+                {filteredProducts.map((item:any) => (
                   <li key={item.id}>
                     <Link
                       to={`/${slugify(String(item.id), { lower: true })}`}
@@ -144,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                       <div className="text-sm text-gray-600">
                         {optionLabels[item.gender] || item.gender} -{" "}
                         {item.colorAndSizes
-                          .map((cs) => optionLabels[cs.color] || cs.color)
+                          .map((cs:any) => optionLabels[cs.color] || cs.color)
                           .join(", ")}
                       </div>
                     </Link>
@@ -239,7 +249,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
           {showResults && filteredProducts.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
               <ul className="divide-y divide-gray-200">
-                {filteredProducts.map((item) => (
+                {filteredProducts.map((item:any) => (
                   <li key={item.id}>
                     <Link
                       to={`/${slugify(String(item.id), { lower: true })}`}
@@ -255,7 +265,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                       <div className="text-sm text-gray-600">
                         {optionLabels[item.gender] || item.gender} -{" "}
                         {item.colorAndSizes
-                          .map((cs) => optionLabels[cs.color] || cs.color)
+                          .map((cs:any) => optionLabels[cs.color] || cs.color)
                           .join(", ")}
                       </div>
                     </Link>

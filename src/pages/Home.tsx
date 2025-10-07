@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import Card from "../components/Card";
 import SelectButton, { MultiSelectButton } from "../components/SelectButton";
-import { type Product, type Option } from "../tools/types";
-import img from "../assets/img/jacket.jpg";
+import { type Option } from "../tools/types";
+import { useGetProductsQuery } from "../tools/product";
 
 //-----------------Filter Options----------------------
 export const categoriesByGender: Record<string, string[]> = {
@@ -68,72 +68,10 @@ interface HomeFilters {
   maxPrice: number | "";
 }
 
-export const products: Product[] = [
-  {
-    id: 1,
-    productCode: "P-001",
-    category: { id: 11, name: "Don" },
-    subcategoryId: 11,
-    price: 75,
-    gender: "WOMAN",
-    user: {
-      id: 101,
-      name: "Aysu",
-      surname: "Ismayilzade",
-      email: "aysu@example.com",
-      phone: "+994511234567",
-      userRole: "USER",
-    },
-    colorAndSizes: [
-      {
-        id: 201,
-        color: "BLACK",
-        photoCount: 2,
-        stock: 5,
-        imageUrls: [img],
-        sizeStockMap: { S: 2, M: 2, L: 1 },
-      },
-    ],
-    createdAt: "2025-09-11T12:00:00Z",
-    offers: [
-      { id: 302, offerTypes: "SALE", price: 120, productCondition: "FIRST_HAND" },
-    ],
-    status: "ACTIVE",
-  },
-  {
-    id: 2,
-    productCode: "P-002",
-    category: { id: 12, name: "Kostyum" },
-    subcategoryId: 12,
-    price: 60,
-    gender: "MAN",
-    user: {
-      id: 102,
-      name: "Ali",
-      surname: "Hüseynov",
-      email: "ali@example.com",
-      phone: "+994501112233",
-      userRole: "USER",
-    },
-    colorAndSizes: [
-      {
-        id: 203,
-        color: "BLUE",
-        photoCount: 1,
-        stock: 4,
-        imageUrls: [img],
-        sizeStockMap: { M: 2, L: 2 },
-      },
-    ],
-    createdAt: "2025-09-09T09:00:00Z",
-    offers: [
-      { id: 303, offerTypes: "RENT", price: 20, rentDuration: 5, productCondition: "SECOND_HAND" },
-    ],
-    status: "ACTIVE",
-  },
-];
-
 const Home = () => {
+  const { data: products = [] } = useGetProductsQuery([]);
+  console.log(products);
+  
   const [filters, setFilters] = useState<HomeFilters>({
     gender: null,
     category: null,
@@ -146,20 +84,19 @@ const Home = () => {
 
   const handleChange = (field: keyof HomeFilters, value: HomeFilters[keyof HomeFilters]) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-    if (field === "gender") setFilters((prev) => ({ ...prev, category: null })); // reset category on gender change
+    if (field === "gender") setFilters((prev) => ({ ...prev, category: null }));
   };
 
-  // Filter logic
   const filteredProducts = useMemo(() => {
     return products
-      .filter(p => p.status === "ACTIVE")
-      .filter(item => {
+      .filter((p: any) => p.status === "ACTIVE")
+      .filter((item: any) => {
         const genderMatch = !filters.gender || item.gender === filters.gender.value;
         const categoryMatch = !filters.category || item.category.name === filters.category.value;
-        const sizeMatch = !filters.size || item.colorAndSizes.some(cs => cs.sizeStockMap.hasOwnProperty(filters.size!.name));
-        const offerMatch = !filters.offerTypes || item.offers.some(o => o.offerTypes === filters.offerTypes!.value);
+        const sizeMatch = !filters.size || item.colorAndSizes.some((cs:any) => cs.sizeStockMap.hasOwnProperty(filters.size!.name));
+        const offerMatch = !filters.offerTypes || item.offers.some((o:any) => o.offerTypes === filters.offerTypes!.value);
         const colorMatch = filters.color.length === 0 ||
-          item.colorAndSizes.some(cs =>
+          item.colorAndSizes.some((cs:any) =>
             filters.color.some(filterColor => cs.color === filterColor.value)
           );
         const minPriceMatch = filters.minPrice === "" || item.price >= filters.minPrice;
@@ -214,7 +151,7 @@ const Home = () => {
         <MultiSelectButton
           selected={filters.color}
           setSelected={(v) => handleChange("color", v)}
-          options={[{ id: 0, name: "Rəng" },...options.colors
+          options={[{ id: 0, name: "Rəng" }, ...options.colors
             .map(o => ({
               id: o.id,
               name: optionLabels[o.name] || o.name,
@@ -249,7 +186,7 @@ const Home = () => {
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.length > 0 ? (
-          filteredProducts.map((item) => <Card key={item.id} clothes={item} />)
+          filteredProducts.map((item:any) => <Card key={item.id} clothes={item} />)
         ) : (
           <div className="col-span-full text-center text-gray-500 text-lg py-20">
             {products.length === 0 ? "Heç bir məhsul yoxdur" : "Heç bir məhsul tapılmadı 😕"}

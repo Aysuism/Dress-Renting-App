@@ -23,7 +23,7 @@ interface ProfileResponse {
 export const authApi = createApi({
     reducerPath: "authApi",
     baseQuery: fetchBaseQuery({
-        baseUrl: "http://localhost:8081/api/v1",
+        baseUrl: "http://109.123.252.254:8081/api/v1",
         prepareHeaders: (headers) => {
             const token = localStorage.getItem("token");
             if (token) {

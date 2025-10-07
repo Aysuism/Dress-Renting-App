@@ -1,48 +1,46 @@
-// tools/product.ts - UPDATED with Admin endpoints
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQuery } from "./base-query";
 
-export const clothesApi = createApi({
-  reducerPath: "clothesApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8081/api/v1/products",
-    prepareHeaders: (headers) => {
-      headers.delete("Content-Type"); // Let browser handle FormData
-      return headers;
-    },
-  }),
-  tagTypes: ["Clothes"],
+export const productsApi = createApi({
+  reducerPath: "productsApi",
+  baseQuery: baseQuery("/v1/products"),
+  tagTypes: ["Products"],
   endpoints: (build) => ({
-    addClothes: build.mutation({
+    getProducts: build.query({
+      query: () => '/all-products',
+      providesTags: ['Products'],
+    }),
+    addProducts: build.mutation({
       query: (formData: FormData) => ({
         url: "/upload",
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: ["Clothes"],
+      invalidatesTags: ["Products"],
     }),
 
-    // Admin: Get all pending products
-    getPendingProducts: build.query<any[], void>({
-      query: () => "/pending",
-      providesTags: ["Clothes"],
-    }),
-
-    // Admin: Update product status
-    updateProductStatus: build.mutation<any, { productCode: string; status: "ACTIVE" | "REJECTED" }>({
+    updateProductStatus: build.mutation({
       query: ({ productCode, status }) => ({
-        url: `/${productCode}/upload`,
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: { status },
+        url: `/change-status?code=${productCode}&status=${status}`,
+        method: 'PUT',
       }),
-      invalidatesTags: ["Clothes"],
+      invalidatesTags: ['Products'],
+    }),
+
+    deleteProducts: build.mutation({
+      query: (productCode) => ({
+        url: `/${productCode}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ["Products"],
     }),
 
   }),
 });
 
 export const {
-  useAddClothesMutation,
-  useGetPendingProductsQuery,
+  useGetProductsQuery,
+  useAddProductsMutation,
   useUpdateProductStatusMutation,
-} = clothesApi;
+  useDeleteProductsMutation,
+} = productsApi;

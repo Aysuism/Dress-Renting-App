@@ -4,28 +4,21 @@ import SelectButton, { MultiSelectButton } from '../components/SelectButton';
 import { type Option } from '../tools/types';
 import { Link } from 'react-router';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { useAddClothesMutation } from '../tools/product';
-import { useDispatch } from 'react-redux';
-import { addPendingProduct } from '../tools/fakeApi';
+import { useAddProductsMutation } from '../tools/product';
 import Swal from 'sweetalert2';
 
-const generateProductCode = () => `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+export const generateProductCode = () => `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
 const colorOptions = options.colors;
 const sizeOptions = options.sizes.map(size => size.name);
 
-// Gender-based categories
 const categoriesByGender: Record<string, string[]> = {
   WOMAN: [
     "Gəlinlik", "Ziyafət geyimi", "Don", "Köynək", "Bluz", "Şalvar",
     "Ətək", "Şort", "Gödəkcə", "Palto", "Ayaqqabı", "Çanta", "Aksesuar", "Digər"
   ],
-  MAN: [
-    "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"
-  ],
-  KID: [
-    "Don", "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"
-  ]
+  MAN: ["Kostyum", "Ayaqqabı", "Aksesuar", "Digər"],
+  KID: ["Don", "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"]
 };
 
 export interface FormDataState {
@@ -46,6 +39,8 @@ export interface FormDataState {
 }
 
 const AddCloth = () => {
+  const [addProducts, { isLoading }] = useAddProductsMutation();
+
   const [formData, setFormData] = useState<FormDataState>({
     category: null,
     gender: null,
@@ -63,12 +58,12 @@ const AddCloth = () => {
     images: []
   });
 
-  const [addClothes] = useAddClothesMutation();
-  const dispatch = useDispatch();
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseFloat(value) || 0 : value
+    }));
   };
 
   const handleSelectChange = (field: keyof FormDataState, value: any) => {
@@ -76,75 +71,106 @@ const AddCloth = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setFormData(prev => ({ ...prev, images: filesArray }));
-    }
+    const filesArray = e.target.files ? Array.from(e.target.files) : [];
+    setFormData(prev => ({ ...prev, images: filesArray }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(addPendingProduct(formData));
 
-    const productRequestDto = {
-      productCode: formData.productCode,
-      subcategoryId: formData.category?.id ?? 0,
-      price: formData.price,
-      gender: formData.gender?.value ?? "",
-      userId: null,
-      colorAndSizes: formData.colors.map(color => ({
-        color: color.value,
-        photoCount: formData.images.length,
-        sizeStockMap: formData.sizes.reduce((acc, s) => {
-          acc[s] = 1;
-          return acc;
-        }, {} as Record<string, number>),
-        imageUrls: [],
-      })),
-      offers: [{
-        offerType: formData.offerTypes?.value ?? "SALE",
-        price: formData.price ?? 0,
-        productCondition: formData.condition?.value ?? "FIRST_HAND",
-      }]
+    const { images, category, offerTypes, condition, colors, sizes, name, surname, email, phone, price, gender, rentDuration, productCode } = formData;
+
+    // ✅ Validation checks
+    const errors = [
+      !images.length && 'Zəhmət olmasa məhsul şəkli seçin',
+      !category && 'Zəhmət olmasa kateqoriya seçin',
+      offerTypes?.value === "SALE" &&
+      (!condition?.value || !["FIRST_HAND", "SECOND_HAND"].includes(condition.value)) &&
+      'SALE təklifləri üçün Vəziyyət FIRST_HAND və ya SECOND_HAND olmalıdır!'
+    ].filter(Boolean);
+
+    if (errors.length) {
+      Swal.fire({ icon: 'error', title: 'Xəta!', text: errors[0] as string });
+      return;
+    }
+
+    // ✅ Helper builders
+    const sizeStockMap = Object.fromEntries(sizes.map(size => [size, 1]));
+    const user = { id: 0, name, surname, email, phone, userRole: "USER" };
+
+    const colorAndSizes = colors.map(c => ({
+      id: 0,
+      color: c.value,
+      photoCount: images.length,
+      stock: sizes.length,
+      imageUrls: [],
+      sizeStockMap
+    }));
+
+    const offers = [{
+      id: 0,
+      product: "string",
+      offerType: offerTypes?.value ?? "RENT",
+      price,
+      rentDuration: offerTypes?.value === "RENT" ? rentDuration : 1,
+      productCondition: condition?.value ?? "FIRST_HAND"
+    }];
+
+    // ✅ Main product payload
+    const product = {
+      id: 0,
+      productCode,
+      user,
+      subcategoryId: category?.id ?? 0,
+      colorAndSizes,
+      price,
+      gender: gender?.value ?? "WOMAN",
+      productStatus: "PENDING",
+      createdAt: new Date().toISOString(),
+      productOffers: offers
     };
 
+    // ✅ FormData builder
     const data = new FormData();
-    data.append("product", new Blob([JSON.stringify(productRequestDto)], { type: "application/json" }));
-    formData.images.forEach(file => data.append("images", file));
+    data.append("product", new Blob([JSON.stringify(product)], { type: "application/json" }));
+    images.forEach(file => data.append("images", file));
 
-    addClothes(data)
-      .unwrap()
-      .then(() => {
-        Swal.fire({
-          icon: 'success',
-          title: 'Uğurla göndərildi!',
-          text: 'Məhsul inzibati təsdiq üçün göndərildi!',
-        });
-        setFormData({
-          category: null,
-          gender: null,
-          offerTypes: null,
-          condition: null,
-          colors: [],
-          sizes: [],
-          price: 0,
-          rentDuration: 1,
-          productCode: generateProductCode(),
-          name: "",
-          surname: "",
-          email: "",
-          phone: "",
-          images: [],
-        });
-      })
-      .catch(err => {
-        console.error("Göndərmə xətası:", err);
-        Swal.fire({
-          icon: 'error',
-          title: 'Xəta baş verdi',
-          text: 'Zəhmət olmasa yenidən cəhd edin.',
-        });
+    // ✅ Submit
+    try {
+      await addProducts(data).unwrap();
+      Swal.fire({
+        icon: 'success',
+        title: 'Uğurla göndərildi!',
+        text: 'Məhsul inzibati təsdiq üçün göndərildi!',
+        timer: 2000,
+        showConfirmButton: true
       });
+
+      // Reset
+      setFormData({
+        category: null,
+        gender: null,
+        offerTypes: null,
+        condition: null,
+        colors: [],
+        sizes: [],
+        price: 0,
+        rentDuration: 1,
+        productCode: generateProductCode(),
+        name: "",
+        surname: "",
+        email: "",
+        phone: "",
+        images: []
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Xəta baş verdi!',
+        text: error.data?.message || 'Zəhmət olmasa yenidən cəhd edin.'
+      });
+      console.log("❌ Error details:", error);
+    }
   };
 
   return (
@@ -156,60 +182,26 @@ const AddCloth = () => {
       </p>
 
       <form onSubmit={handleSubmit} encType="multipart/form-data">
+        {/* Name, surname, email, phone */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <div className="flex flex-col">
-            <label htmlFor="name">Ad</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              placeholder='Ad'
-              onChange={handleChange}
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              required
-            />
-          </div>
-          <div className="flex flex-col">
-            <label htmlFor="surname">Soyad</label>
-            <input
-              type="text"
-              id="surname"
-              name="surname"
-              value={formData.surname}
-              placeholder='Soyad'
-              onChange={handleChange}
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              required
-            />
-          </div>
-          <div className="flex flex-col">
-            <label htmlFor="phone">Telefon</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              placeholder='+994'
-              onChange={handleChange}
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              required
-            />
-          </div>
-          <div className="flex flex-col">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              placeholder='example@gmail.com'
-              onChange={handleChange}
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              required
-            />
-          </div>
+          {["name", "surname", "phone", "email"].map((field) => (
+            <div className="flex flex-col" key={field}>
+              <label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+              <input
+                type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
+                id={field}
+                name={field}
+                value={formData[field as keyof FormDataState] as string}
+                placeholder={field === "phone" ? '+994' : field === "email" ? "example@gmail.com" : ""}
+                onChange={handleChange}
+                className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
+                required
+              />
+            </div>
+          ))}
         </div>
+
+        {/* Images */}
         <div className="flex flex-col my-10 gap-5">
           <label htmlFor="images">Şəkillər (Maksimum 3 ədəd) *</label>
           <div
@@ -228,111 +220,89 @@ const AddCloth = () => {
             <p>Şəkilləri seçin və ya buraya sürükləyin</p>
           </div>
 
-          {/* Preview */}
           {formData.images.length > 0 && (
             <div className="flex gap-4 mt-4 flex-wrap">
-              {formData.images.map((file, idx) => {
-                const url = URL.createObjectURL(file);
-                return (
-                  <div key={idx} className="relative w-24 h-24">
-                    <img
-                      src={url}
-                      alt="preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
-                      onClick={() =>
-                        setFormData(prev => ({
-                          ...prev,
-                          images: prev.images.filter((_, i) => i !== idx),
-                        }))
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
+              {formData.images.map((file, idx) => (
+                <div key={idx} className="relative w-24 h-24">
+                  <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover rounded-lg" />
+                  <button
+                    type="button"
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
+                    onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
+
+        {/* Gender, category, colors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <div className='col-span-1 sm:col-span-2 flex gap-5'>
-
             <SelectButton
               selected={formData.gender}
-              setSelected={item => handleSelectChange('gender', item)}
-              options={[
-                { id: 0, name: "Cins", value: "" },
-                ...options.genders.map(o => ({
-                  id: o.id,
-                  name: optionLabels[o.name] || o.name,
-                  value: o.name,
-                }))
-              ]}
+              setSelected={(item) => handleSelectChange('gender', item)}
+              options={[{ id: 0, name: "Cins", value: "" }, ...options.genders.map((o: Option) => ({
+                id: o.id,
+                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
+                value: o.name
+              }))]}
             />
 
             {formData.gender && (
               <SelectButton
                 selected={formData.category}
-                setSelected={item => handleSelectChange('category', item)}
-                options={[
-                  { id: 0, name: "Kateqoriya", value: "" },
-                  ...categoriesByGender[formData.gender.value as keyof typeof categoriesByGender].map((name, idx) => ({
-                    id: idx + 1,
-                    name,
-                    value: name,
-                  }))
-                ]}
+                setSelected={(item) => handleSelectChange('category', item)}
+                options={[{ id: 0, name: "Kateqoriya", value: "" }, ...categoriesByGender[formData.gender.value as keyof typeof categoriesByGender].map((name, idx) => ({
+                  id: idx + 1,
+                  name,
+                  value: name
+                }))]}
               />
             )}
 
             <MultiSelectButton
-              options={[{ id: 0, name: "Rəng seçin", value: "" }, ...colorOptions.map(o => ({
+              options={[{ id: 0, name: "Rəng seçin", value: "" }, ...colorOptions.map((o: Option) => ({
                 id: o.id,
-                name: optionLabels[o.name] || o.name,
-                value: o.name,
+                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
+                value: o.name
               }))]}
               selected={formData.colors}
               setSelected={(items) => setFormData(prev => ({ ...prev, colors: items }))}
             />
           </div>
 
+          {/* Offer type, condition */}
           <SelectButton
-            options={[{ id: 0, name: "İstifadə forması" }, ...options.offerTypes.map(o => ({
+            options={[{ id: 0, name: "İstifadə forması" }, ...options.offerTypes.map((o: Option) => ({
               id: o.id,
-              name: optionLabels[o.name] || o.name,
-              value: o.name,
+              name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
+              value: o.name
             }))]}
             selected={formData.offerTypes}
-            setSelected={item => handleSelectChange('offerTypes', item)}
+            setSelected={(item) => handleSelectChange('offerTypes', item)}
           />
 
           <SelectButton
-            options={[{ id: 0, name: "Vəziyyət" }, ...options.conditions.map((o: any) => ({
-              id: o.id,
-              name: optionLabels[o.name] || o.name,
-              value: o.name,
-            }))]}
+            options={[
+              { id: 0, name: "Vəziyyət" },
+              ...(formData.offerTypes?.value === "SALE"
+                ? options.conditions.filter(o => ["FIRST_HAND", "SECOND_HAND"].includes(o.name))
+                : options.conditions
+              ).map(o => ({
+                id: o.id,
+                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
+                value: o.name
+              }))
+            ]}
             selected={formData.condition}
-            setSelected={item => handleSelectChange('condition', item)}
+            setSelected={(item) => handleSelectChange('condition', item)}
           />
 
-          <div className="flex flex-col col-span-1 sm:col-span-2">
-            <label htmlFor="note">Qeyd</label>
-            <input
-              type="text"
-              id="note"
-              name="note"
-              // value={formData.note}
-              placeholder='Müştəriyə çatdırmaq istədiyiniz qeydi daxil edin...'
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              onChange={handleChange}
-            />
-          </div>
 
+          {/* Price */}
           <div className="flex flex-col col-span-1 sm:col-span-2">
             <label htmlFor="price">Qiymət</label>
             <input
@@ -341,13 +311,7 @@ const AddCloth = () => {
               name="price"
               value={formData.price === 0 ? "" : formData.price}
               placeholder='0'
-              onChange={e => {
-                const value = e.target.value;
-                setFormData(prev => ({
-                  ...prev,
-                  price: value === "" ? 0 : parseFloat(value)
-                }));
-              }}
+              onChange={handleChange}
               className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
               min="0"
               step="0.01"
@@ -355,6 +319,7 @@ const AddCloth = () => {
             />
           </div>
 
+          {/* Sizes */}
           <div className="flex flex-col col-span-1 sm:col-span-2">
             <label htmlFor="sizes">Ölçülər</label>
             <div className="flex flex-wrap gap-2 mt-2">
@@ -370,23 +335,23 @@ const AddCloth = () => {
                   }}
                   className={`w-[78px] py-2 rounded-lg text-sm cursor-pointer ${formData.sizes.includes(size)
                     ? "bg-black text-white"
-                    : "bg-[#E5E7EB] text-[#4A5565]"
-                    }`}
+                    : "bg-[#E5E7EB] text-[#4A5565]"}`
+                  }
                 >
                   {size}
                 </button>
               ))}
             </div>
           </div>
-
         </div>
 
         <div className='text-end'>
           <button
             type="submit"
             className="w-full md:w-[500px] h-[40px] rounded-lg font-bold text-lg text-white bg-black hover:bg-gray-800 transition-all disabled:opacity-50 cursor-pointer"
+            disabled={isLoading}
           >
-            Məhsulu Göndər
+            {isLoading ? 'Məhsul Göndərilir...' : 'Məhsulu Göndər'}
           </button>
         </div>
       </form>
