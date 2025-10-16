@@ -1,357 +1,706 @@
-import React, { useState } from 'react';
-import { optionLabels, options } from './Home';
-import SelectButton, { MultiSelectButton } from '../components/SelectButton';
-import { type Option } from '../tools/types';
-import { Link } from 'react-router';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { useAddProductsMutation } from '../tools/product';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import { CheckIcon } from "lucide-react";
+import Swal from "sweetalert2";
+import { useAddProductsMutation } from "../tools/product";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import { useGetCategoriesQuery } from "../tools/categories";
+import SelectButton from "../components/SelectButton";
 
-export const generateProductCode = () => `P-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-const colorOptions = options.colors;
-const sizeOptions = options.sizes.map(size => size.name);
-
-const categoriesByGender: Record<string, string[]> = {
-  WOMAN: [
-    "Gəlinlik", "Ziyafət geyimi", "Don", "Köynək", "Bluz", "Şalvar",
-    "Ətək", "Şort", "Gödəkcə", "Palto", "Ayaqqabı", "Çanta", "Aksesuar", "Digər"
-  ],
-  MAN: ["Kostyum", "Ayaqqabı", "Aksesuar", "Digər"],
-  KID: ["Don", "Kostyum", "Ayaqqabı", "Aksesuar", "Digər"]
-};
-
-export interface FormDataState {
-  category: Option | null;
-  gender: Option | null;
-  offerTypes: Option | null;
-  condition: Option | null;
-  colors: Option[];
-  sizes: string[];
-  price: number;
-  rentDuration: number;
-  productCode: string;
+// ------------------- TYPES -------------------
+interface Option {
+  id: string;
   name: string;
-  surname: string;
-  email: string;
-  phone: string;
-  images: File[];
+  value: string;
 }
 
-const AddCloth = () => {
-  const [addProducts, { isLoading }] = useAddProductsMutation();
+interface ColorSizeVariant {
+  color: string;
+  colorName: string;
+  sizes: string[];
+  imageUrls: File[];
+  imagePreviews?: string[]; // For preview only
+}
 
-  const [formData, setFormData] = useState<FormDataState>({
-    category: null,
-    gender: null,
-    offerTypes: null,
-    condition: null,
-    colors: [],
-    sizes: [],
-    price: 0,
-    rentDuration: 1,
-    productCode: generateProductCode(),
-    name: "",
-    surname: "",
-    email: "",
-    phone: "",
-    images: []
+interface FormData {
+  userName: string;
+  userSurname: string;
+  userEmail: string;
+  userPhone: string;
+  productCode: string;
+  subcategoryId: string;
+  price: string;
+  gender: string;
+  description: string;
+  offerType: string;
+  condition: string;
+  colorAndSizes: ColorSizeVariant[];
+}
+
+// ------------------- STATIC OPTIONS -------------------
+export const colorOptions: Option[] = [
+  { id: "1", name: "Qırmızı", value: "RED" },
+  { id: "2", name: "Yaşıl", value: "GREEN" },
+  { id: "3", name: "Mavi", value: "BLUE" },
+  { id: "4", name: "Sarı", value: "YELLOW" },
+  { id: "5", name: "Qara", value: "BLACK" },
+  { id: "6", name: "Ağ", value: "WHITE" },
+  { id: "7", name: "Narıncı", value: "ORANGE" },
+  { id: "8", name: "Bənövşəyi", value: "PURPLE" },
+  { id: "9", name: "Çəhrayı", value: "PINK" },
+  { id: "10", name: "Qəhvəyi", value: "BROWN" },
+  { id: "11", name: "Boz", value: "GRAY" },
+  { id: "12", name: "Bej", value: "BEIGE" },
+];
+
+const sizeOptions: Option[] = [
+  { id: "1", name: "XS", value: "XS" },
+  { id: "2", name: "S", value: "S" },
+  { id: "3", name: "M", value: "M" },
+  { id: "4", name: "L", value: "L" },
+  { id: "5", name: "XL", value: "XL" },
+  { id: "6", name: "XXL", value: "XXL" },
+];
+
+const offerTypeOptions: Option[] = [
+  { id: "1", name: "Kirayə", value: "RENT" },
+  { id: "2", name: "Satış", value: "SALE" },
+];
+
+const conditionOptions: Option[] = [
+  { id: "1", name: "Birinci Əl", value: "FIRST_HAND" },
+  { id: "2", name: "İkinci Əl", value: "SECOND_HAND" },
+];
+
+const genderMap: Record<string, string> = {
+  "1": "WOMAN",
+  "2": "MAN",
+  "3": "KID",
+};
+
+// ------------------- HELPERS -------------------
+const getColorClass = (colorValue: string) => {
+  const colorMap: Record<string, string> = {
+    RED: "bg-red-500",
+    GREEN: "bg-green-500",
+    BLUE: "bg-blue-500",
+    YELLOW: "bg-yellow-400",
+    BLACK: "bg-black",
+    WHITE: "bg-white border border-gray-300",
+    ORANGE: "bg-orange-500",
+    PURPLE: "bg-purple-500",
+    PINK: "bg-pink-400",
+    BROWN: "bg-amber-900",
+    GRAY: "bg-gray-400",
+    BEIGE: "bg-amber-200",
+  };
+  return colorMap[colorValue] || "bg-gray-200";
+};
+
+// ------------------- MAIN COMPONENT -------------------
+const AddCloth: React.FC = () => {
+  const { data: categories = [] } = useGetCategoriesQuery([]);
+  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+  const [addProducts, { isLoading }] = useAddProductsMutation();
+  const [errors, setErrors] = useState<Record<string, any>>({});
+
+  const [formData, setFormData] = useState<FormData>({
+    userName: "",
+    userSurname: "",
+    userEmail: "",
+    userPhone: "",
+    productCode: "",
+    subcategoryId: "",
+    price: "",
+    gender: "",
+    description: "",
+    offerType: "",
+    condition: "",
+    colorAndSizes: [{ color: "BLACK", colorName: "Qara", sizes: [], imageUrls: [] }],
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
+  const [_categoryOptions, setCategoryOptions] = useState([]);
+  const [_subcategoryOptions, setSubcategoryOptions] = useState([]);
+
+  // ------------------- EFFECTS -------------------
+  useEffect(() => {
+    if (!categories.length) return;
+    const genderOpts = categories.map((c: any) => ({
+      id: String(c.id),
+      name: c.name,
+      value: String(c.id),
+    }));
+    setCategoryOptions(genderOpts);
+  }, [categories]);
+
+  useEffect(() => {
+    if (!formData.gender) return;
+    const filtered = subcategories
+      .filter((sc: any) => sc.categoryId === Number(formData.gender))
+      .map((sc: any) => ({
+        id: String(sc.id),
+        name: sc.name,
+        value: String(sc.id),
+      }));
+    setSubcategoryOptions(filtered);
+  }, [formData.gender, subcategories]);
+
+  const categoryOpt: Option[] = [
+    { id: "0", name: "Cins seçin", value: "" },
+    ...categories.map((c: any) => ({
+      id: String(c.id),
+      name: c.name,
+      value: String(c.id),
+    })),
+  ];
+
+  const subcategoryOpt: Option[] = [
+    { id: "0", name: "Kateqoriya seçin", value: "" }, // placeholder
+    ...subcategories
+      .filter((sc: any) => !formData.gender || sc.categoryId === Number(formData.gender))
+      .map((sc: any) => ({
+        id: String(sc.id),
+        name: sc.name,
+        value: String(sc.id),
+      })),
+  ];
+
+  // ------------------- HANDLERS -------------------
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+    const cleanValue = value.replace(/[^a-zA-ZƏÖÜŞÇĞİəöüşıçğİ\s]/g, "");
+
+    setFormData((prev) => ({ ...prev, [name]: cleanValue }));
+  };
+
+  const handleColorSelect = (colorValue: string) => {
+    setFormData((prev) => {
+      const exists = prev.colorAndSizes.find((cs) => cs.color === colorValue);
+      let updatedColors: ColorSizeVariant[];
+      if (exists) {
+        updatedColors = prev.colorAndSizes.filter((cs) => cs.color !== colorValue);
+      } else {
+        const colorName = colorOptions.find((c) => c.value === colorValue)?.name || "";
+        updatedColors = [...prev.colorAndSizes, { color: colorValue, colorName, sizes: [], imageUrls: [] }];
+      }
+      return { ...prev, colorAndSizes: updatedColors };
+    });
+  };
+
+  const handleSizeSelect = (colorValue: string, size: string) => {
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      colorAndSizes: prev.colorAndSizes.map((cs) => {
+        if (cs.color === colorValue) {
+          const newSizes = cs.sizes.includes(size)
+            ? cs.sizes.filter((s) => s !== size)
+            : [...cs.sizes, size];
+          return { ...cs, sizes: newSizes };
+        }
+        return cs;
+      }),
     }));
   };
 
-  const handleSelectChange = (field: keyof FormDataState, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleImageUpload = (colorValue: string, files: FileList | null) => {
+    if (!files) return;
+    const fileArray = Array.from(files);
+
+    const previewPromises = fileArray.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(previewPromises).then(previews => {
+      setFormData((prev) => ({
+        ...prev,
+        colorAndSizes: prev.colorAndSizes.map((cs) =>
+          cs.color === colorValue ? {
+            ...cs,
+            imageUrls: fileArray,
+            imagePreviews: previews
+          } : cs
+        ),
+      }));
+    });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const filesArray = e.target.files ? Array.from(e.target.files) : [];
-    setFormData(prev => ({ ...prev, images: filesArray }));
+  const removeImage = (colorValue: string, index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      colorAndSizes: prev.colorAndSizes.map((cs) => {
+        if (cs.color === colorValue) {
+          const newImageUrls = [...cs.imageUrls];
+          const newImagePreviews = [...(cs.imagePreviews || [])];
+          newImageUrls.splice(index, 1);
+          newImagePreviews.splice(index, 1);
+          return {
+            ...cs,
+            imageUrls: newImageUrls,
+            imagePreviews: newImagePreviews
+          };
+        }
+        return cs;
+      }),
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Basic text fields
+    if (!formData.userName.trim()) newErrors.userName = "Ad daxil edin";
+    if (!formData.userSurname.trim()) newErrors.userSurname = "Soyad daxil edin";
+
+    if (!formData.userEmail.trim()) newErrors.userEmail = "E-mail daxil edin. example@gmail.com";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.userEmail))
+      newErrors.userEmail = "Düzgün e-mail daxil edin";
+
+    if (!formData.userPhone.trim() || formData.userPhone.length !== 9)
+      newErrors.userPhone = "Telefon nömrəsi düzgün daxil edilməyib";
+
+    // Selects
+    if (!formData.gender) newErrors.gender = "Cins seçin";
+    if (!formData.subcategoryId) newErrors.subcategoryId = "Kateqoriya seçin";
+    if (!formData.offerType) newErrors.offerType = "İstifadə forması seçin";
+    if (!formData.condition) newErrors.condition = "Vəziyyət seçin";
+
+    // Color & Size validations
+    if (formData.colorAndSizes.length === 0) {
+      newErrors.colorAndSizes = "Ən azı bir rəng seçin";
+    } else {
+      formData.colorAndSizes.forEach((cs, index) => {
+        // Sizes
+        if (!cs.sizes || cs.sizes.length === 0) {
+          newErrors[`colorAndSizes[${index}].sizes`] = `${cs.colorName || cs.color} rəngi üçün ölçü seçin`;
+        }
+
+        // Images
+        const imageCount = cs.imageUrls?.length || 0;
+        if (imageCount < 3) {
+          newErrors[`colorAndSizes[${index}].images`] = `${cs.colorName || cs.color} rəngi üçün ən azı 3 şəkil yükləyin`;
+        } else if (imageCount > 10) {
+          newErrors[`colorAndSizes[${index}].images`] = `${cs.colorName || cs.color} rəngi üçün maksimum 10 şəkil yükləyə bilərsiniz`;
+        }
+      });
+    }
+
+    if (!formData.price.trim()) newErrors.price = "Qiymət daxil edin";
+    if (!formData.description.trim()) newErrors.description = "Qeyd bölməsini doldurun";
+
+    return newErrors;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const { images, category, offerTypes, condition, colors, sizes, name, surname, email, phone, price, gender, rentDuration, productCode } = formData;
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      Swal.fire({ icon: "error", title: "Xəta!", text: "Bütün sahələri düzgün doldurun" });
+      return;
+    }
+    setErrors({});
 
-    // ✅ Validation checks
-    const errors = [
-      !images.length && 'Zəhmət olmasa məhsul şəkli seçin',
-      !category && 'Zəhmət olmasa kateqoriya seçin',
-      offerTypes?.value === "SALE" &&
-      (!condition?.value || !["FIRST_HAND", "SECOND_HAND"].includes(condition.value)) &&
-      'SALE təklifləri üçün Vəziyyət FIRST_HAND və ya SECOND_HAND olmalıdır!'
-    ].filter(Boolean);
-
-    if (errors.length) {
-      Swal.fire({ icon: 'error', title: 'Xəta!', text: errors[0] as string });
+    const phoneRegex = /^(50|51|55|70|77|99)\d{7}$/;
+    if (!phoneRegex.test(formData.userPhone)) {
+      Swal.fire({
+        icon: "error",
+        title: "Xəta!",
+        text: "Telefon nömrəsi düzgün formatda deyil. İlk iki rəqəm 50,51,55,70,99 olmalıdır.",
+      });
       return;
     }
 
-    // ✅ Helper builders
-    const sizeStockMap = Object.fromEntries(sizes.map(size => [size, 1]));
-    const user = { id: 0, name, surname, email, phone, userRole: "USER" };
-
-    const colorAndSizes = colors.map(c => ({
-      id: 0,
-      color: c.value,
-      photoCount: images.length,
-      stock: sizes.length,
-      imageUrls: [],
-      sizeStockMap
+    const expandedColorAndSizes = formData.colorAndSizes.map(cs => ({
+      color: cs.color,
+      size: cs.sizes,
+      imageFiles: cs.imageUrls,
     }));
 
-    const offers = [{
-      id: 0,
-      product: "string",
-      offerType: offerTypes?.value ?? "RENT",
-      price,
-      rentDuration: offerTypes?.value === "RENT" ? rentDuration : 1,
-      productCondition: condition?.value ?? "FIRST_HAND"
-    }];
+    const payload = {
+      userName: formData.userName,
+      userSurname: formData.userSurname,
+      userEmail: formData.userEmail,
+      userPhone: `+994${formData.userPhone}`,
+      subcategoryId: Number(formData.subcategoryId),
+      gender: genderMap[formData.gender] || null,
+      offerType: formData.offerType,
+      condition: formData.condition,
+      price: formData.price,
+      description: formData.description,
+      productOffers: [
+        {
+          offerType: formData.offerType,
+          price: formData.price,
+          condition: formData.condition,
+          rentDuration: formData.offerType === "RENT" ? 1 : undefined,
+        },
+      ],
+      colorAndSizes: expandedColorAndSizes.map(c => ({
+        color: c.color,
+        size: c.size.join(","),
+      }))
 
-    // ✅ Main product payload
-    const product = {
-      id: 0,
-      productCode,
-      user,
-      subcategoryId: category?.id ?? 0,
-      colorAndSizes,
-      price,
-      gender: gender?.value ?? "WOMAN",
-      productStatus: "PENDING",
-      createdAt: new Date().toISOString(),
-      productOffers: offers
     };
 
-    // ✅ FormData builder
-    const data = new FormData();
-    data.append("product", new Blob([JSON.stringify(product)], { type: "application/json" }));
-    images.forEach(file => data.append("images", file));
+    const formPayload = new FormData();
+    formPayload.append("product", new Blob([JSON.stringify(payload)], { type: "application/json" }));
 
-    // ✅ Submit
+    expandedColorAndSizes.forEach(entry => {
+      if (entry.imageFiles && entry.imageFiles.length > 0) {
+        const colorKey = entry.color;
+        const sizeKey = entry.size;
+        const key = `images_${colorKey}_${sizeKey}`;
+        entry.imageFiles.forEach((file: File) => {
+          formPayload.append(key, file, file.name);
+        });
+      }
+    });
+
     try {
-      await addProducts(data).unwrap();
+      await addProducts(formPayload).unwrap();
       Swal.fire({
-        icon: 'success',
-        title: 'Uğurla göndərildi!',
-        text: 'Məhsul inzibati təsdiq üçün göndərildi!',
+        icon: "success",
+        title: "Uğurla göndərildi!",
         timer: 2000,
-        showConfirmButton: true
       });
 
-      // Reset
       setFormData({
-        category: null,
-        gender: null,
-        offerTypes: null,
-        condition: null,
-        colors: [],
-        sizes: [],
-        price: 0,
-        rentDuration: 1,
-        productCode: generateProductCode(),
-        name: "",
-        surname: "",
-        email: "",
-        phone: "",
-        images: []
+        userName: "",
+        userSurname: "",
+        userEmail: "",
+        userPhone: "",
+        productCode: "",
+        subcategoryId: "",
+        price: "",
+        gender: "",
+        description: "",
+        offerType: "",
+        condition: "",
+        colorAndSizes: [{ color: "BLACK", colorName: "Qara", sizes: [], imageUrls: [] }],
       });
+      setErrors({});
     } catch (error: any) {
+      console.error("Submission error:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Xəta baş verdi!',
-        text: error.data?.message || 'Zəhmət olmasa yenidən cəhd edin.'
+        icon: "error",
+        title: "Xəta!",
+        text: error.data?.message || "Yenidən cəhd edin",
       });
-      console.log("❌ Error details:", error);
     }
   };
 
+  // ------------------- RENDER -------------------
   return (
-    <div className='py-10'>
+    <div className="py-10">
       <p className="mb-10 text-[#4A5565] text-[14px] flex items-center">
         <Link to="/" className="hover:text-black">Əsas</Link>
         <ChevronLeftIcon className="translate-y-[1px]" />
         Məhsul Əlavə et
       </p>
 
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        {/* Name, surname, email, phone */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          {["name", "surname", "phone", "email"].map((field) => (
-            <div className="flex flex-col" key={field}>
-              <label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+      <form onSubmit={handleSubmit} className="space-y-10" encType="multipart/form-data">
+        {/* Contact Info - Same as before */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">Ad</label>
+            <input
+              type="text"
+              name="userName"
+              placeholder="Ad"
+              value={formData.userName}
+              onChange={handleChange}
+              className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
+            />
+            {errors.userName && (
+              <p className="text-red-500 text-sm mt-1">{errors.userName}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">Soyad</label>
+            <input
+              type="text"
+              name="userSurname"
+              placeholder="Soyad"
+              value={formData.userSurname}
+              onChange={handleChange}
+              className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
+            />
+            {errors.userSurname && (
+              <p className="text-red-500 text-sm mt-1">{errors.userSurname}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">E-mail</label>
+            <input
+              type="email"
+              name="userEmail"
+              placeholder="E-mail"
+              value={formData.userEmail}
+              onChange={(e) => {
+                const { name, value } = e.target;
+                const cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, "");
+                setFormData((prev) => ({ ...prev, [name]: cleanValue }));
+              }}
+              className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
+            />
+            {errors.userEmail && (
+              <p className="text-red-500 text-sm mt-1">{errors.userEmail}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">Telefon</label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                +994
+              </div>
               <input
-                type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
-                id={field}
-                name={field}
-                value={formData[field as keyof FormDataState] as string}
-                placeholder={field === "phone" ? '+994' : field === "email" ? "example@gmail.com" : ""}
-                onChange={handleChange}
-                className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-                required
+                name="userPhone"
+                value={formData.userPhone}
+                maxLength={9}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                  setFormData((prev) => ({ ...prev, userPhone: digits }));
+                }}
+                className="pl-16 pr-4 py-3 border rounded-lg outline-none w-full border-[#D4D4D4]"
+                placeholder="xx xxx xx xx"
               />
+            </div>
+            {errors.userPhone && (
+              <p className="text-red-500 text-sm mt-1">{errors.userPhone}</p>
+            )}
+          </div>
+
+          {/* Category & Gender - Same as before */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">Cins</label>
+            <SelectButton
+              selected={formData.gender || ""} // must match placeholder value ("")
+              setSelected={(value) => {
+                setFormData(prev => ({
+                  ...prev,
+                  gender: value,
+                  subcategoryId: "", // reset subcategory if gender changes
+                }));
+              }}
+              options={categoryOpt}
+            />
+
+            {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">Kateqoriya</label>
+            <SelectButton
+              selected={formData.subcategoryId || ""} // value must match placeholder value
+              setSelected={(value) =>
+                setFormData(prev => ({
+                  ...prev,
+                  subcategoryId: value,
+                }))
+              }
+              options={subcategoryOpt}
+            />
+            {errors.subcategoryId && <p className="text-red-500 text-sm mt-1">{errors.subcategoryId}</p>}
+          </div>
+
+          {/* Offer Type & Condition - Same as before */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">İstifadə forması</label>
+            <SelectButton
+              selected={formData.offerType || ""}
+              setSelected={(value) => setFormData(prev => ({ ...prev, offerType: value }))}
+              options={[
+                { id: "0", name: "İstifadə forması", value: "" },
+                ...offerTypeOptions.map(o => ({
+                  id: o.id,
+                  name: o.name,
+                  value: o.value,
+                })),
+              ]}
+            />
+            {errors.offerType && (
+              <p className="text-red-500 text-sm mt-1">{errors.offerType}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">Vəziyyət</label>
+            <SelectButton
+              selected={formData.condition}
+              setSelected={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+              options={[
+                { id: "0", name: "Vəziyyət", value: "" },
+                ...conditionOptions.map(o => ({
+                  id: o.id,
+                  name: o.name,
+                  value: o.value,
+                }))
+              ]}
+            />
+            {errors.condition && (
+              <p className="text-red-500 text-sm mt-1">{errors.condition}</p>
+            )}
+          </div>
+
+          {/* Color */}
+          <h3 className="col-span-1 col-span-2 text-lg font-medium">Rəng Seçimi</h3>
+          <div className="grid grid-cols-6 gap-4 mb-2 bg-white border border-[#D4D4D4] rounded-lg p-5">
+            {colorOptions.map((color) => (
+              <div
+                key={color.id}
+                className={`relative cursor-pointer ${formData.colorAndSizes.some(cs => cs.color === color.value)}`}
+                onClick={() => handleColorSelect(color.value)}
+              >
+                <div className={`w-[32px] h-[32px] rounded-lg ${getColorClass(color.value)}`} />
+                {formData.colorAndSizes.some(cs => cs.color === color.value) && (
+                  <div className={`w-[32px] h-[32px] absolute inset-0 flex items-center justify-center bg-opacity-30 rounded-lg`}>
+                    <CheckIcon className="text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {errors.colorAndSizes && (
+            <p className="text-red-500 text-sm mb-4">{errors.colorAndSizes}</p>
+          )}
+
+          {/* Color Variants */}
+          {formData.colorAndSizes.map((cs, index) => (
+            <div key={cs.color} className="col-span-2 relative mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <h4 className="font-medium text-md">Rəng: {cs.colorName}</h4>
+                <div className={`w-8 h-8 rounded-lg ${getColorClass(cs.color)} border border-gray-300`} />
+              </div>
+
+              {/* Sizes */}
+              <div className="w-full md:w-[50%] grid grid-cols-1 gap-3 mb-4">
+                <label className="text-md font-medium">Ölçülər</label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {sizeOptions.map((size) => (
+                    <button
+                      key={size.id}
+                      type="button"
+                      onClick={() => handleSizeSelect(cs.color, size.value)}
+                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${cs.sizes.includes(size.value)
+                        ? 'bg-black text-white'
+                        : 'bg-[#E5E7EB] text-gray-600'
+                        }`}
+                    >
+                      {size.name}
+                    </button>
+                  ))}
+                </div>
+                {errors[`colorAndSizes[${index}].sizes`] && (
+                  <p className="text-red-500 text-sm mt-1">{errors[`colorAndSizes[${index}].sizes`]}</p>
+                )}
+              </div>
+
+              {/* Images */}
+              <div>
+                <label className="text-md font-medium mb-1">Şəkil yüklə</label>
+                <p className="text-gray-500 mb-2">
+                  {cs.imageUrls.length}/10 şəkil (minimum 3)
+                </p>
+
+                {/* Image Upload Area */}
+                <label className="flex flex-col gap-2 items-center justify-center h-[100px] border-2 border-dashed border-black rounded-[16px] cursor-pointer text-center text-gray-500 hover:bg-gray-100">
+                  <span>Şəkil yükləmək üçün seçin və ya buraya sürükləyin</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(cs.color, e.target.files)}
+                  />
+                </label>
+
+                {/* Image Previews */}
+                {cs.imagePreviews && cs.imagePreviews.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium mb-2">Yüklənmiş şəkillər:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {cs.imagePreviews.map((preview, idx) => (
+                        <div key={idx} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Preview ${idx + 1}`}
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(cs.color, idx)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {errors[`colorAndSizes[${index}].images`] && (
+                  <p className="text-red-500 text-sm mt-1">{errors[`colorAndSizes[${index}].images`]}</p>
+                )}
+              </div>
             </div>
           ))}
-        </div>
 
-        {/* Images */}
-        <div className="flex flex-col my-10 gap-5">
-          <label htmlFor="images">Şəkillər (Maksimum 3 ədəd) *</label>
-          <div
-            className="border-2 border-dashed border-black rounded-[16px] p-8 text-center cursor-pointer hover:bg-gray-50"
-            onClick={() => document.getElementById("images")?.click()}
-          >
-            <input
-              type="file"
-              id="images"
-              name="images"
-              multiple
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-            <p>Şəkilləri seçin və ya buraya sürükləyin</p>
-          </div>
-
-          {formData.images.length > 0 && (
-            <div className="flex gap-4 mt-4 flex-wrap">
-              {formData.images.map((file, idx) => (
-                <div key={idx} className="relative w-24 h-24">
-                  <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover rounded-lg" />
-                  <button
-                    type="button"
-                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
-                    onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Gender, category, colors */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <div className='col-span-1 sm:col-span-2 flex gap-5'>
-            <SelectButton
-              selected={formData.gender}
-              setSelected={(item) => handleSelectChange('gender', item)}
-              options={[{ id: 0, name: "Cins", value: "" }, ...options.genders.map((o: Option) => ({
-                id: o.id,
-                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
-                value: o.name
-              }))]}
-            />
-
-            {formData.gender && (
-              <SelectButton
-                selected={formData.category}
-                setSelected={(item) => handleSelectChange('category', item)}
-                options={[{ id: 0, name: "Kateqoriya", value: "" }, ...categoriesByGender[formData.gender.value as keyof typeof categoriesByGender].map((name, idx) => ({
-                  id: idx + 1,
-                  name,
-                  value: name
-                }))]}
-              />
-            )}
-
-            <MultiSelectButton
-              options={[{ id: 0, name: "Rəng seçin", value: "" }, ...colorOptions.map((o: Option) => ({
-                id: o.id,
-                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
-                value: o.name
-              }))]}
-              selected={formData.colors}
-              setSelected={(items) => setFormData(prev => ({ ...prev, colors: items }))}
-            />
-          </div>
-
-          {/* Offer type, condition */}
-          <SelectButton
-            options={[{ id: 0, name: "İstifadə forması" }, ...options.offerTypes.map((o: Option) => ({
-              id: o.id,
-              name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
-              value: o.name
-            }))]}
-            selected={formData.offerTypes}
-            setSelected={(item) => handleSelectChange('offerTypes', item)}
-          />
-
-          <SelectButton
-            options={[
-              { id: 0, name: "Vəziyyət" },
-              ...(formData.offerTypes?.value === "SALE"
-                ? options.conditions.filter(o => ["FIRST_HAND", "SECOND_HAND"].includes(o.name))
-                : options.conditions
-              ).map(o => ({
-                id: o.id,
-                name: optionLabels[o.name as keyof typeof optionLabels] || o.name,
-                value: o.name
-              }))
-            ]}
-            selected={formData.condition}
-            setSelected={(item) => handleSelectChange('condition', item)}
-          />
-
-
-          {/* Price */}
-          <div className="flex flex-col col-span-1 sm:col-span-2">
-            <label htmlFor="price">Qiymət</label>
+          {/* Price & Description */}
+          <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
               type="number"
-              id="price"
               name="price"
-              value={formData.price === 0 ? "" : formData.price}
-              placeholder='0'
-              onChange={handleChange}
-              className="px-4 py-2 mt-2 border-1 border-[#D4D4D4] rounded-lg focus:border-purple-600"
-              min="0"
-              step="0.01"
-              required
+              value={formData.price}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d*\.?\d*$/.test(value)) {
+                  setFormData((prev) => ({ ...prev, price: value }));
+                }
+              }}
+              className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
+              placeholder="0.00"
             />
+            {errors.price && (
+              <p className="text-red-500 text-sm mt-1">{errors.price}</p>
+            )}
           </div>
 
-          {/* Sizes */}
-          <div className="flex flex-col col-span-1 sm:col-span-2">
-            <label htmlFor="sizes">Ölçülər</label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {sizeOptions.map(size => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => {
-                    const newSizes = formData.sizes.includes(size)
-                      ? formData.sizes.filter(s => s !== size)
-                      : [...formData.sizes, size];
-                    setFormData(prev => ({ ...prev, sizes: newSizes }));
-                  }}
-                  className={`w-[78px] py-2 rounded-lg text-sm cursor-pointer ${formData.sizes.includes(size)
-                    ? "bg-black text-white"
-                    : "bg-[#E5E7EB] text-[#4A5565]"}`
-                  }
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
+          <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
+            <label className="text-sm font-medium text-black mb-2">Qeyd</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={(e) => {
+                const { name, value } = e.target;
+                setFormData({ ...formData, [name]: value });
+              }}
+              className="px-4 py-3 bg-white border rounded-lg outline-none border-[#D4D4D4] h-[100px]"
+            />
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+            )}
           </div>
+
         </div>
 
-        <div className='text-end'>
+        <div className="text-end">
           <button
             type="submit"
-            className="w-full md:w-[500px] h-[40px] rounded-lg font-bold text-lg text-white bg-black hover:bg-gray-800 transition-all disabled:opacity-50 cursor-pointer"
             disabled={isLoading}
+            className="w-full max-w-[600px] bg-black text-white px-6 py-3 rounded-lg disabled:opacity-50"
           >
-            {isLoading ? 'Məhsul Göndərilir...' : 'Məhsulu Göndər'}
+            {isLoading ? "Göndərilir..." : "Məhsul Əlavə Et"}
           </button>
         </div>
       </form>

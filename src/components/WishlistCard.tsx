@@ -30,6 +30,7 @@ const note = "Qeyd: Məhsul yalnız həftə içi mövcuddur, şəhər daxili ça
 
 const WishlistCard: React.FC<WishlistCardProps> = ({ wishListData }) => {
     const { removeWishlistItem, inWishlist } = useWishlist();
+    console.log(wishListData);
 
     const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
@@ -54,8 +55,8 @@ const WishlistCard: React.FC<WishlistCardProps> = ({ wishListData }) => {
 
                 <button
                     className={`absolute top-2 right-2 p-2 text-xl cursor-pointer ${inWishlist(wishListData.id.toString())
-                            ? "text-red-500"
-                            : "text-gray-300"
+                        ? "text-red-500"
+                        : "text-gray-300"
                         }`}
                     onClick={toggleWishlist}
                 >
@@ -72,7 +73,7 @@ const WishlistCard: React.FC<WishlistCardProps> = ({ wishListData }) => {
                 <div className="grid grid-cols-2 items-center">
                     <p className="font-[500]">{wishListData.name}</p>
                     <div className="font-[600] text-right">
-                        {wishListData.price} AZN / {wishListData.rentDuration} gün
+                        {wishListData.price} AZN 
                     </div>
                 </div>
 

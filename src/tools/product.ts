@@ -3,7 +3,7 @@ import { baseQuery } from "./base-query";
 
 export const productsApi = createApi({
   reducerPath: "productsApi",
-  baseQuery: baseQuery("/v1/products"),
+  baseQuery: baseQuery("/products"),
   tagTypes: ["Products"],
   endpoints: (build) => ({
     getProducts: build.query({
@@ -20,9 +20,10 @@ export const productsApi = createApi({
     }),
 
     updateProductStatus: build.mutation({
-      query: ({ productCode, status }) => ({
-        url: `/change-status?code=${productCode}&status=${status}`,
+      query: ({ productCode, formData }) => ({
+        url: `/${productCode}/upload`,
         method: 'PUT',
+        body: formData,
       }),
       invalidatesTags: ['Products'],
     }),

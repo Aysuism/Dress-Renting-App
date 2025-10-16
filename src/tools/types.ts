@@ -8,7 +8,7 @@ export interface User {
 }
 
 export interface Option {
-  id: number;
+  id: string | number;
   name: string;
   value?: string;
 }
@@ -18,46 +18,29 @@ export interface ColorAndSize {
   color: string;
   photoCount: number;
   stock: number;
-  imageUrls: string[];
-  sizeStockMap: Record<string, number>;
+  imageUrls: string;
+  size: string[];
 }
 
 export interface Offer {
   id: number;
-  offerTypes: "RENT" | "SALE";
+  offerType: "RENT" | "SALE";
   price: number;
-  rentDuration?: number; // only for RENT
+  rentDuration?: number;
   productCondition: "FIRST_HAND" | "SECOND_HAND";
 }
 
-export interface Product {
-  id: number;
-  productCode: string;
-  category: Option;          // main category
-  subcategoryId?: number;    // optional
-  price: number;
-  gender: "WOMAN" | "MAN" | "KID";
-  user: User;
-  colorAndSizes: ColorAndSize[];
-  createdAt: string; // ISO date string
-  offers: Offer[];
-  status: "PENDING" | "APPROVED" | "REJECTED" | "ACTIVE";
-}
-
-
-// Form data type (for adding/editing)
-// export interface FormData {
-//   id?: string; // optional for localStorage
-//   user: User;
-//   category: Option | null;
-//   gender: Option | null;
-//   offerTypes: Option | null;
-//   condition: Option | null;
-//   colors: Option[];
-//   sizes: string[];
-//   price: number;
-//   images: File[]; // file objects
-//   rentDuration: number;
+// export interface Product {
+//   userName: string;
+//   userSurname: string;
+//   userEmail: string;
+//   userPhone: string;
 //   productCode: string;
-//   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+//   subcategoryId: string;
+//   price: number;
+//   gender: "WOMAN" | "MAN" | "KID";
+//   description:string;
+//   colorAndSizes: ColorAndSize[];
+//   createdAt: string;
+//   offers: Offer[];
 // }

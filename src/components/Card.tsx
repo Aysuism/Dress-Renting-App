@@ -5,65 +5,60 @@ import slugify from "slugify";
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import listIcon from "../assets/img/product-details-icon.webp";
-import { type Product } from "../tools/types";
-
-const note = "Qeyd: Məhsul yalnız həftə içi mövcuddur, şəhər daxili çatdırılma ilə.";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import type { Product } from "../tools/homeFilter";
 
 interface CardProps {
   clothes: Product;
 }
 
-// Map backend offer types to Azerbaijani
-const offerTypeMap: Record<string, string> = {
-  RENT: "Kirayə",
-  SALE: "Satış",
-};
-
 const Card: React.FC<CardProps> = ({ clothes }) => {
   const { addWishlistItem, removeWishlistItem, inWishlist } = useWishlist();
+  const mainColor = clothes.colorAndSizes.map(item => item.color);
+  const mainSizes = clothes.colorAndSizes.map(item => item.size).join(",");
+  const mainColorImage = clothes.colorAndSizes[0]?.imageUrls[0];
 
-  const mainColorSize = clothes.colorAndSizes[0];
+  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+
+
+  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategoryId)?.name;
 
   const wishlistItem = {
-    id: clothes.id.toString(),
-    name: clothes.user.name,
+    id: clothes.productCode,
     price: clothes.price,
-    image: mainColorSize?.imageUrls[0] || "",
-    category: clothes.category.name,
-    colors: clothes.colorAndSizes.map(cs => cs.color),
-    sizes: Object.keys(mainColorSize?.sizeStockMap || {}),
-    rentDuration: clothes.offers[0]?.rentDuration || 0,
-    offerType: clothes.offers[0]?.offerTypes,
+    image: mainColorImage,
+    category: clothes.subcategoryId,
+    colors: mainColor,
+    size: mainSizes,
   };
 
   const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (inWishlist(clothes.id.toString())) {
-      removeWishlistItem(clothes.id.toString());
+    if (inWishlist(clothes.productCode)) {
+      removeWishlistItem(clothes.productCode);
     } else {
       addWishlistItem(wishlistItem);
     }
   };
 
+  console.log(clothes);
+
+
   return (
-    <Link
-      to={`/${slugify(String(clothes.id), { lower: true })}`}
-      className="bg-white rounded-2xl border border-[#D1D5DC] cursor-pointer p-4"
-    >
+    <Link to={`/${slugify(String(clothes.productCode), { lower: true })}`}
+      className="bg-white rounded-2xl border border-[#D1D5DC] cursor-pointer p-4">
       <div className="relative w-full h-[231px]">
         <img
-          src={mainColorSize?.imageUrls[0] || ""}
-          alt={clothes.user.name}
+          src={mainColorImage}
+          alt="product-image"
           className="object-contain w-full h-full rounded-2xl"
         />
 
-        <button
-          className={`absolute top-2 right-2 p-2 text-xl cursor-pointer ${inWishlist(clothes.id.toString()) ? "text-red-500" : "text-gray-300"
-            }`}
-          onClick={toggleWishlist}
-        >
-          {inWishlist(clothes.id.toString())
+        <button className={`absolute top-2 right-2 w-[43px] h-[43px] text-xl cursor-pointer bg-white rounded-full
+        ${inWishlist(clothes.productCode) ? "text-red-500" : "text-gray-300"}`}
+          onClick={toggleWishlist}>
+          {inWishlist(clothes.productCode)
             ? <FavoriteIcon className="text-black" />
             : <FavoriteBorderOutlinedIcon className="text-black" />}
         </button>
@@ -76,28 +71,40 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
         </div>
 
         {/* Category & Offer Type */}
-        <div className="grid grid-cols-2">
-          <span>Kateqoriya: {clothes.category.name}</span>
-          <span className="text-right">
-            İstifadə forması: {offerTypeMap[clothes.offers[0]?.offerTypes || ""] || "-"}
-          </span>
+        <div className="flex justify-between gap-4">
+          <p>Kateqoriya:
+            <span className="text-gray-500 ms-1">
+              {subcategoryName}
+            </span>
+          </p>
+          <p>
+            İstifadəsi:
+            <span className="text-gray-500 ms-1">
+              {clothes.offers[0].offerType === 'SALE' ? 'Satış' : 'İcarə'}
+            </span>
+          </p>
         </div>
-
 
         {/* Size & Color */}
         <div className="grid grid-cols-2">
-          <span>Ölçü: {Object.keys(mainColorSize?.sizeStockMap || {}).join(", ")}</span>
-          <span className="flex items-center justify-end gap-2">
+          <p>Ölçü:
+            <span className="text-gray-500 ms-1">
+              {mainSizes}
+            </span>
+          </p>
+
+          <p className="flex items-center justify-end gap-2">
             Rəng:
-            {clothes.colorAndSizes.map((item: any) => (
+            {clothes.colorAndSizes.map((item: any, idx: number) => (
               <span
-                key={item.id}
+                key={idx}
                 className="w-5 h-5 rounded-full border border-gray-300"
-                style={{ backgroundColor: item.color }}
+                style={{ backgroundColor: item.color.toLowerCase() }}
               />
             ))}
-          </span>
+          </p>
         </div>
+
 
         {/* Note */}
         <div className="grid grid-cols-[16px_1fr] items-start gap-3">
@@ -106,7 +113,7 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
             alt="details-icon"
             className="w-[16px] object-contain mt-1"
           />
-          <p>{note.slice(0, 40)}...</p>
+          <p>{clothes.description.slice(0, 40)}...</p>
         </div>
       </div>
     </Link>

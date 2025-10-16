@@ -1,104 +1,63 @@
 import { Link, Navigate, useParams } from "react-router";
 import { useState } from "react";
 import slugify from "slugify";
-import type { Product } from "../tools/types";
 import img from "../assets/img/jacket.jpg";
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import mailIcon from "../assets/img/mail-icon.webp"
-import phoneLightIcon from "../assets/img/phone-light-icon.webp"
-import phoneDarkIcon from "../assets/img/phone-dark-icon.webp"
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import mailIcon from "../assets/img/mail-icon.webp";
+import phoneLightIcon from "../assets/img/phone-light-icon.webp";
+import phoneDarkIcon from "../assets/img/phone-dark-icon.webp";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import { useGetProductsQuery } from "../tools/product";
+import type { ColorAndSize, Offer } from "../tools/homeFilter";
 
-const localProducts: Product[] = [
-    {
-        id: 1,
-        productCode: "P-001",
-        category: { id: 11, name: "Don" },
-        subcategoryId: 11,
-        price: 75,
-        gender: "WOMAN",
-        user: {
-            id: 101,
-            name: "Aysu",
-            surname: "Ismayilzade",
-            email: "aysu@example.com",
-            phone: "+994511234567",
-            userRole: "USER",
-        },
-        colorAndSizes: [
-            {
-                id: 201,
-                color: "BLACK",
-                photoCount: 2,
-                stock: 5,
-                imageUrls: [img, "https://picsum.photos/300/400?random=1"],
-                sizeStockMap: { S: 2, M: 2, L: 1 },
-            },
-            {
-                id: 202,
-                color: "WHITE",
-                photoCount: 1,
-                stock: 3,
-                imageUrls: ["https://picsum.photos/300/400?random=3"],
-                sizeStockMap: { M: 2, XL: 1 },
-            },
-        ],
-        createdAt: "2025-09-11T12:00:00Z",
-        offers: [
-            { id: 302, offerTypes: "SALE", price: 120, productCondition: "FIRST_HAND" },
-        ],
-        status: "ACTIVE",
-    },
-    {
-        id: 2,
-        productCode: "P-002",
-        category: { id: 12, name: "Kostyum" },
-        subcategoryId: 12,
-        price: 60,
-        gender: "MAN",
-        user: {
-            id: 102,
-            name: "Ali",
-            surname: "Hüseynov",
-            email: "ali@example.com",
-            phone: "+994501112233",
-            userRole: "USER",
-        },
-        colorAndSizes: [
-            {
-                id: 203,
-                color: "BLUE",
-                photoCount: 1,
-                stock: 4,
-                imageUrls: ["https://picsum.photos/300/400?random=4"],
-                sizeStockMap: { M: 2, L: 2 },
-            },
-        ],
-        createdAt: "2025-09-09T09:00:00Z",
-        offers: [
-            { id: 303, offerTypes: "RENT", price: 20, rentDuration: 5, productCondition: "SECOND_HAND" },
-        ],
-        status: "ACTIVE",
-    },
-];
+export interface Product {
+  userName: string;
+  userSurname: string;
+  userEmail: string;
+  userPhone: string;
+  productCode: string;
+  subcategoryId: string;
+  price: number;
+  gender: "WOMAN" | "MAN" | "KID";
+  description:string;
+  colorAndSizes: ColorAndSize[];
+  createdAt: string;
+  offers: Offer[];
+}
 
-const ProductDetails: React.FC = () => {
+const ProductDetails = () => {
     const { urlid } = useParams<{ urlid: string }>();
-    const [_selectedSize, setSelectedSize] = useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = useState(0);
 
-    const product = localProducts.find(p => slugify(String(p.id), { lower: true }) === urlid);
+    const [selectedColor, setSelectedColor] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState(0);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const { data: products = [], isLoading: isProductLoading } = useGetProductsQuery([]);
+    const { data: subcategories = [], isLoading: isSubLoading } = useGetSubcategoriesQuery([]);
+
+    if (isProductLoading || isSubLoading) return <div>Loading...</div>;
+
+    const product: Product | undefined = products.find((p: any) =>
+        slugify(String(p.productCode), { lower: true }) === slugify(String(urlid), { lower: true })
+    );
 
     if (!product) return <Navigate to="/not-found" replace />;
 
-    const mainColorSize = product.colorAndSizes[0];
-    const images = mainColorSize?.imageUrls || [];
-    const colors = product.colorAndSizes.map(item => item.color);
-    const sizeStockMap = mainColorSize?.sizeStockMap || {};
-    const offer = product.offers[0];
-    const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
+    const subcategoryName = subcategories?.find((sc: any) => sc.id === product.subcategoryId)?.name;
+
+    // Sizes and Images per Color
+    const colorAndSizes = product.colorAndSizes as any;
+    const colors = Array.from(new Set(colorAndSizes.map((item: any) => item.color))) as string[];
+    const activeColor = selectedColor || colors[0];
+
+    const availableSizes = colorAndSizes
+        .filter((cs: any) => cs.color === activeColor)
+        .flatMap((cs: any) => cs.size.split(",").map((s: any) => s.trim()).filter(Boolean));
+
+    const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
 
     return (
-        <div className="py-10 max-w-6xl ">
+        <div className="py-10 ">
             <p className="mb-4 text-[#4A5565] text-[14px] flex items-center">
                 <Link to="/" className="hover:text-black">Əsas</Link>
                 <ChevronLeftIcon className="translate-y-[1px]" />
@@ -108,100 +67,87 @@ const ProductDetails: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Images */}
                 <div>
-                    <div className="mb-4 border border-gray-400 rounded-lg overflow-hidden">
+                    <div className="mb-4 border border-gray-400 rounded-lg overflow-hidden"
+                        onClick={() => setIsModalOpen(true)}>
                         <img
-                            src={images[selectedImage] || img}
-                            alt={product.user.name}
-                            className="w-full h-[400px] object-cover"
+                            src={images[selectedImage]}
+                            alt={activeColor as string}
+                            className="w-full h-[400px] object-cover transition-transform duration-200 hover:scale-105"
                         />
                     </div>
 
                     <div className="grid grid-cols-4 gap-2">
-                        {images.map((img, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setSelectedImage(idx)}
-                                className={`rounded-md overflow-hidden ${selectedImage === idx ? 'border border-gray-300' : ''}`}
-                            >
-                                <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-16 object-cover" />
+                        {images.map((imgSrc: any, idx: number) => (
+                            <button key={idx} onClick={() => setSelectedImage(idx)}
+                                className={`rounded-md overflow-hidden ${selectedImage === idx ? "border border-gray-300" : ""}`}>
+                                <img src={imgSrc} alt={`Thumbnail ${idx}`} className="w-full h-16 object-cover" />
                             </button>
                         ))}
                     </div>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setIsModalOpen(false)}>
+                            <div className="relative w-[90%] max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setIsModalOpen(false)}
+                                    className="absolute top-3 right-3 text-white font-bold px-3 py-1 rounded-md cursor-pointer transform hover:scale-120 transition-transform duration-100">
+                                    ✕
+                                </button>
+                                <img src={images[selectedImage] || img} alt="Full view" className="w-full h-auto max-h-[90vh] object-contain rounded-lg shadow-lg" />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Product Info */}
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-semibold">{product.category.name}</h1>
+                        <h1 className="text-2xl font-semibold">{subcategoryName}</h1>
                         <div className="flex items-baseline mt-2">
                             <span className="text-2xl font-semibold">{product.price} AZN</span>
-                            {offer?.offerTypes === "RENT" && <span className="ml-1 text-2xl font-semibold">/ {product.offers[0]?.rentDuration || 0} gün</span>}
                         </div>
                     </div>
-
 
                     {/* Colors */}
                     <div className="flex">
                         <p className="text-[20px] font-medium mr-3">Rəng:</p>
                         <div className="flex gap-2">
                             {colors.map((color, idx) => (
-                                <div
-                                    key={idx}
-                                    className="w-8 h-8 rounded-full border border-gray-300"
+                                <div key={idx} onClick={() => { setSelectedColor(color); setSelectedImage(0); }}
+                                    className={`w-8 h-8 rounded-full border-2 cursor-pointer ${activeColor === color ? "border-black" : "border-gray-300"}`}
                                     style={{ backgroundColor: color.toLowerCase() }}
-                                    title={color}
-                                ></div>
+                                    title={color}></div>
                             ))}
                         </div>
                     </div>
 
                     {/* Sizes */}
                     <div className="flex flex-wrap gap-2 my-10">
-                        {allSizes.map((size) => {
-                            const inStock = sizeStockMap[size] > 0;
-                            return (
-                                <button key={size} disabled={!inStock} onClick={() => setSelectedSize(size)} className={`w-[72px] h-[42px] rounded-md font-medium
-                                            ${inStock ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`} >
-                                    {size}
-                                </button>
-                            );
-                        })}
+                        {["XS", "S", "M", "L", "XL", "XXL"].map(size => (
+                            <div key={size}
+                                className={`w-[72px] h-[42px] rounded-md font-medium flex items-center justify-center ${availableSizes.includes(size) ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}>
+                                {size}
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Product Note */}
+                    {/* Note */}
                     <div>
                         <span className="font-semibold">Qeyd</span>
-                        <p className="mt-2">Bu pencək gündəlik geyim və ya xüsusi tədbirlər üçün ideal seçimdir. Keyfiyyətli materialdan hazırlandığı üçün həm rahat, həm də davamlıdır. Məhsul yalnız həftə içi mövcuddur və şəhər daxili çatdırılma ilə təhvil verilir.</p>
+                        <p className="mt-2">{product.description}</p>
                     </div>
-
-                    {/* Offers */}
-                    <div className="flex gap-3 items-center">
-                        <span className="font-semibold">İstifadə forması:</span>
-                        <div className="flex gap-2">
-                            {["RENT", "SALE"].map((type) => {
-                                const exists = product.offers.some((o) => o.offerTypes === type);
-                                return (
-                                    <div
-                                        key={type}
-                                        className={`w-[72px] h-[42px] flex items-center justify-center rounded-md font-medium
-                                                  ${exists ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}
-                                    >
-                                        {type === "RENT" ? "İcarə" : "Satış"}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
 
                     {/* Contact Info */}
                     <div className="bg-white p-4 rounded-lg border border-gray-300">
-                        <p className="mb-1 font-semibold">{product.user.name} {product.user.surname}</p>
-                        <a href={`mailto:${product.user.email}`} className="mb-3 flex gap-2"><img src={mailIcon} alt="mail-icon" className="w-[18px] h-[14px] translate-y-[7px]" />{product.user.email}</a>
-                        <a href={`tel:${product.user.phone}`} className="group flex items-center justify-center gap-3 h-[48px] bg-black text-white p-3 rounded-lg border-2 hover:bg-white hover:text-black transition-all duration-300">
+                        <p className="mb-1 font-semibold">{product.userName} {product.userSurname}</p>
+                        <a href={`mailto:${product.userEmail}`} className="mb-3 flex gap-2">
+                            <img src={mailIcon} alt="mail-icon" className="w-[18px] h-[14px] translate-y-[7px]" />
+                            {product.userEmail}
+                        </a>
+                        <a href={`tel:${product.userPhone}`}
+                            className="group flex items-center justify-center gap-3 h-[48px] bg-black text-white p-3 rounded-lg border-2 hover:bg-white hover:text-black transition-all duration-300">
                             <img src={phoneLightIcon} alt="phoneIcon" className="w-5 h-5 block group-hover:hidden" />
                             <img src={phoneDarkIcon} alt="phoneIcon" className="w-5 h-5 hidden group-hover:block" />
-                            {product.user.phone}
+                            {product.userPhone}
                         </a>
                     </div>
                 </div>

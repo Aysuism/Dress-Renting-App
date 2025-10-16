@@ -10,7 +10,6 @@ const AdminAccess: React.FC = () => {
     const allowedSecret = import.meta.env.VITE_ADMIN_SECRET;
 
     if (secret === allowedSecret) {
-      localStorage.setItem("showAdminLogin", "true");
       Swal.fire({
         icon: "success",
         title: "Admin Access",
@@ -18,10 +17,9 @@ const AdminAccess: React.FC = () => {
         timer: 1100,
         showConfirmButton: false,
       }).then(() => {
-        navigate("/admin-login", { replace: true });
+        navigate("/admin-login", { replace: true, state: { allowed: true } });
       });
     } else {
-      // invalid secret → redirect
       navigate("/", { replace: true });
     }
   }, [secret, navigate]);

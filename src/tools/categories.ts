@@ -1,28 +1,37 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { baseQuery } from "./base-query";
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const categoriesApi = createApi({
   reducerPath: "categoriesApi",
-  baseQuery: baseQuery("/categories"), // already includes /categories
+  baseQuery: fetchBaseQuery({
+    baseUrl: "https://weshare.az/api/categories",
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   tagTypes: ["Categories"],
   endpoints: (build) => ({
     getCategories: build.query({
-      query: () => "", // GET /categories
+      query: () => "",
       providesTags: ["Categories"],
     }),
 
     addCategories: build.mutation({
-      query: (formData: FormData) => ({
-        url: "", // POST /categories
+      query: (formData) => ({
+        url: "",
         method: "POST",
-        body: formData,
+        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
       }),
       invalidatesTags: ["Categories"],
     }),
 
     updateCategories: build.mutation({
       query: ({ id, data }) => ({
-        url: `/${id}`, // PUT /categories/{id}
+        url: `/${id}`,
         method: "PUT",
         body: data,
       }),
@@ -31,7 +40,7 @@ export const categoriesApi = createApi({
 
     deleteCategories: build.mutation({
       query: (id) => ({
-        url: `/${id}`, // DELETE /categories/{id}
+        url: `/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Categories"],

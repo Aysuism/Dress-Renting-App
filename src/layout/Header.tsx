@@ -5,10 +5,10 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/img/logo.webp";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import Swal from "sweetalert2";
-import { categoriesByGender, optionLabels } from "../pages/Home";
-import slugify from "slugify";
 import Fuse from "fuse.js";
-import { useGetProductsQuery } from "../tools/product";
+import { useGetCategoriesQuery } from "../tools/categories";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import { jwtDecode } from "jwt-decode";
 
 export interface HeaderProps {
   showSection: (section: string) => void;
@@ -16,23 +16,43 @@ export interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ showSection }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
-  const { data: products = [] } = useGetProductsQuery(undefined);
 
+  const { data: categories = [] } = useGetCategoriesQuery([]);
+  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+
+  // ------------------ User/Admin ------------------
   useEffect(() => {
     const checkUser = () => {
+      const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("loggedInUser");
+
+      const isTokenValid = (token: string) => {
+        try {
+          const decoded: { exp: number; role?: string } = jwtDecode(token);
+          return decoded.exp > Date.now() / 1000;
+        } catch {
+          return false;
+        }
+      };
+
+      if (!token || !isTokenValid(token)) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("loggedInUser");
+        setIsAdmin(false);
+        return;
+      }
+
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
           setIsAdmin(user.role === "ADMIN");
-        } catch (err) {
-          console.error("Error parsing loggedInUser:", err);
+        } catch {
+          setIsAdmin(false);
         }
       } else {
         setIsAdmin(false);
@@ -41,9 +61,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
     checkUser();
     window.addEventListener("userLoggedIn", checkUser);
+    window.addEventListener("storage", checkUser);
 
     return () => {
       window.removeEventListener("userLoggedIn", checkUser);
+      window.removeEventListener("storage", checkUser);
     };
   }, []);
 
@@ -61,107 +83,85 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
     setSidebarOpen(false);
   };
 
-const fuseData = products.map((p: any) => {
-  const gender = p.gender;
-  const categoryName = p.category?.name ?? p.category; // if p.category is an object or string
-
-  // Safe check
-  const categoriesForGender = gender && categoriesByGender[gender] ? categoriesByGender[gender] : [];
-
-  const searchText = [
-    categoryName,
-    gender,
-    ...p.colorAndSizes.map((c: any) => c.color),
-    optionLabels[gender] ?? "",
-    categoriesForGender.includes(optionLabels[categoryName] ?? "")
-      ? optionLabels[categoryName]
-      : categoryName,
-    ...p.colorAndSizes.map((c: any) => optionLabels[c.color] ?? c.color)
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return { ...p, searchText };
-});
+  // ---------------- SEARCH ----------------
+  const fuseData = [
+    ...categories.map((c: any) => ({ type: "category", id: c.id, name: c.name })),
+    ...subcategories.map((s: any) => ({
+      type: "subcategory",
+      id: s.id,
+      name: s.name,
+      categoryId: s.categoryId,
+    })),
+  ];
 
   const fuse = new Fuse(fuseData, {
-    keys: ["searchText"],
-    threshold: 0.4
+    keys: ["name"],
+    threshold: 0.4,
   });
 
-  const filteredProducts = keyword
-    ? fuse.search(keyword.toLowerCase()).map(res => res.item)
-    : [];
+  const filteredResults = keyword ? fuse.search(keyword).map(r => r.item) : [];
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setKeyword(e.target.value.toLowerCase());
+    setKeyword(e.target.value);
     setShowResults(e.target.value.length > 0);
   };
 
-  const handleSearchFocus = () => {
-    if (keyword.length > 0) {
-      setShowResults(true);
-    }
-  };
-
-  const handleResultClick = () => {
+  const handleResultClick = (item: any) => {
     setKeyword("");
     setShowResults(false);
-  };
 
+    // Map category IDs to gender values
+    const categoryToGenderMap: { [key: string]: string } = {
+      "1": "MAN",      // Kişi category
+      "2": "WOMAN",    // Qadın category  
+      "3": "KID"       // Uşaq category
+    };
+
+    if (item.type === "category") {
+      // Navigate to search results with gender filter (since products use gender, not categoryId)
+      const gender = categoryToGenderMap[item.id];
+      navigate(`/searching-result?gender=${gender}&categoryName=${encodeURIComponent(item.name)}`);
+    } else if (item.type === "subcategory") {
+      // Navigate to search results with subcategory filter
+      navigate(`/searching-result?subcategory=${item.id}&subcategoryName=${encodeURIComponent(item.name)}`);
+    }
+  };
+  // ---------------- UI ----------------
   return (
     <header className="px-6 py-4 bg-white sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center gap-6">
         {/* Logo */}
-        <Link to="/" className="shrink-0">
-          <img
-            src={logo}
-            alt="second-hand-logo"
-            className="w-[100px] h-[50px] lg:w-auto"
-          />
+        <Link to="/">
+          <img src={logo} alt="we-share-logo" className="w-full h-[50px]" />
         </Link>
 
         {/* Desktop search */}
         <div className="relative mx-4 hidden md:block" ref={searchRef}>
-
           <div className="relative">
             <input
               type="text"
-              placeholder="Secondhand-də axtar"
+              placeholder="Axtarış..."
               className="w-full lg:w-[444px] px-10 py-2 pl-10 border border-gray-400 rounded-lg outline-none focus:ring-1"
               value={keyword}
               onChange={handleSearch}
-              onFocus={handleSearchFocus}
+              onFocus={handleSearch}
             />
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
 
-          {/* Search results*/}
-          {showResults && filteredProducts.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-              <ul className="divide-y divide-gray-200">
-                {filteredProducts.map((item:any) => (
-                  <li key={item.id}>
-                    <Link
-                      to={`/${slugify(String(item.id), { lower: true })}`}
-                      onClick={handleResultClick}
-                      className="block px-4 py-3 hover:bg-gray-100 transition"
-                    >
-                      <div className="font-medium">
-                        {optionLabels[item.category.name] || item.category.name}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {optionLabels[item.gender] || item.gender} -{" "}
-                        {item.colorAndSizes
-                          .map((cs:any) => optionLabels[cs.color] || cs.color)
-                          .join(", ")}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Search results */}
+          {showResults && filteredResults.length > 0 && (
+            <ul className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-gray-200">
+              {filteredResults.map((item: any) => (
+                <li
+                  key={`${item.type}-${item.id}`}
+                  className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                  onClick={() => handleResultClick(item)}
+                >
+                  {item.name}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -210,10 +210,10 @@ const fuseData = products.map((p: any) => {
       </div>
 
       {/* Mobile sidebar */}
-      <div className={`fixed top-0 left-0 w-full h-full z-50 p-6 flex flex-col gap-4 md:hidden bg-[#f9fafb] text-black shadow-lg transform transition-transform duration-300 
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+      <div
+        className={`fixed top-0 left-0 w-full h-full z-50 p-6 flex flex-col gap-4 md:hidden bg-[#f9fafb] text-black shadow-lg transform transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         style={{ pointerEvents: sidebarOpen ? "auto" : "none" }}
-        ref={sidebarRef}
       >
         {/* Close button */}
         <button
@@ -221,7 +221,13 @@ const fuseData = products.map((p: any) => {
           className="text-gray-500 flex justify-end hover:text-gray-700"
           aria-label="Close menu"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -239,59 +245,58 @@ const fuseData = products.map((p: any) => {
               type="text"
               value={keyword}
               onChange={handleSearch}
-              onFocus={handleSearchFocus}
+              onFocus={handleSearch}
               placeholder="Secondhand-də axtar"
               className="flex-1 bg-transparent outline-none text-sm"
             />
           </div>
 
-          {/* Mobile search results dropdown */}
-          {showResults && filteredProducts.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-              <ul className="divide-y divide-gray-200">
-                {filteredProducts.map((item:any) => (
-                  <li key={item.id}>
-                    <Link
-                      to={`/${slugify(String(item.id), { lower: true })}`}
-                      onClick={() => {
-                        handleResultClick();
-                        setSidebarOpen(false);
-                      }}
-                      className="block px-4 py-3 hover:bg-gray-100 transition"
-                    >
-                      <div className="font-medium">
-                        {optionLabels[item.category.name] || item.category.name}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {optionLabels[item.gender] || item.gender} -{" "}
-                        {item.colorAndSizes
-                          .map((cs:any) => optionLabels[cs.color] || cs.color)
-                          .join(", ")}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {showResults && filteredResults.length > 0 && (
+            <ul className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-gray-200">
+              {filteredResults.map((item: any) => (
+                <li
+                  key={`${item.type}-${item.id}`}
+                  className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                  onClick={() => {
+                    handleResultClick(item);
+                    setSidebarOpen(false);
+                  }}
+                >
+                  {item.name}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
-        <Link to="/" className="text-center border rounded-lg py-[6px] border-gray-400 text-gray-400 hover:border-black hover:text-black transition-all duration-500" onClick={() => handleNav("home")}>
-          Ana Səhifə
-        </Link>
-        <Link to="/wishlist" className="text-center border rounded-lg py-[6px] hover:bg-black hover:text-white transition-all duration-500" onClick={() => handleNav("favorites")}>
+        <Link
+          to="/wishlist"
+          className="text-center border rounded-lg py-[6px] hover:bg-black hover:text-white transition-all duration-500"
+          onClick={() => handleNav("favorites")}
+        >
           <FavoriteBorderOutlinedIcon /> Sevimlilər
         </Link>
-        <Link to="/add-cloth" className="text-center border rounded-lg py-[6px] bg-black text-white hover:bg-white hover:text-black transition-all duration-500" onClick={() => handleNav("add-clothes")}>
+        <Link
+          to="/add-cloth"
+          className="text-center border rounded-lg py-[6px] bg-black text-white hover:bg-white hover:text-black transition-all duration-500"
+          onClick={() => handleNav("add-clothes")}
+        >
           Məhsul Əlavə Et
         </Link>
 
         {isAdmin && (
           <>
-            <Link to="/admin-panel" className="text-center border border-black bg-black text-white rounded-lg py-[6px] hover:bg-white hover:text-black transition-all duration-500" onClick={() => handleNav("admin-panel")}>
+            <Link
+              to="/admin-panel"
+              className="text-center border border-black bg-black text-white rounded-lg py-[6px] hover:bg-white hover:text-black transition-all duration-500"
+              onClick={() => handleNav("admin-panel")}
+            >
               Admin
             </Link>
-            <button onClick={handleLogout} className="w-full text-center border rounded-lg py-[6px] text-red-500 border-red-500 hover:bg-red-500 hover:text-white transition-all duration-500">
+            <button
+              onClick={handleLogout}
+              className="w-full text-center border rounded-lg py-[6px] text-red-500 border-red-500 hover:bg-red-500 hover:text-white transition-all duration-500"
+            >
               Logout
             </button>
           </>
