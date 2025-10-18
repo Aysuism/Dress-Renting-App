@@ -9,7 +9,7 @@ const SubcategoryManagement = () => {
   const [deleteSubCategory] = useDeleteSubcategoryMutation();
   const [addSubcategories, { isLoading }] = useAddSubcategoryMutation();
   const [updateSub] = useUpdateSubcategoryMutation();
-  const [editingSub, setEditingSub] = useState<{ id: number; name: string; categoryId: string } | null>(null);
+  const [editingSub, setEditingSub] = useState<{ id: number; name: string; categoryId:string } | null>(null);
 
   const [formData, setFormData] = useState({ name: "", categoryId: "" });
 
@@ -74,7 +74,7 @@ const SubcategoryManagement = () => {
     });
   };
 
-  const handleEditSub = (sub: any) => setEditingSub({ id: sub.id, name: sub.name, categoryId: sub.categoryId });
+  const handleEditSub = (sub: any) => setEditingSub({ id: sub.id, name: sub.name, categoryId: sub.category.id });
 
   const handleUpdateSubmit = (e: any) => {
     e.preventDefault();
@@ -143,23 +143,23 @@ const SubcategoryManagement = () => {
           <h3 className="text-lg font-semibold mb-2">Mövcud Alt Kateqoriyalar:</h3>
           <ul className="space-y-2">
             {subcategories.map((sub: any) => (
-            <li key={sub.id} className="flex justify-between items-center bg-white px-3 py-2 rounded shadow-sm">
-              <span>{sub.name} ({categories.find((c:any)=>c.id===sub.categoryId).name})</span>
-              <div className="flex gap-2">
-                <button
-                  className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                  onClick={() => handleEditSub(sub)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                  onClick={() => handleDeleteSubcategory(sub.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
+              <li key={sub.id} className="flex justify-between items-center bg-white px-3 py-2 rounded shadow-sm">
+                <span>{sub.name} ({categories.find((c: any) => c.id === sub.category.id).name})</span>
+                <div className="flex gap-2">
+                  <button
+                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                    onClick={() => handleEditSub(sub)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    onClick={() => handleDeleteSubcategory(sub.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
             ))}
           </ul>
         </div>

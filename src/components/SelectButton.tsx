@@ -4,24 +4,30 @@ import { ChevronDownIcon, CheckIcon } from "lucide-react";
 import type { Option } from "../tools/types";
 
 interface SelectButtonProps {
-    selected: Option;
-    setSelected: (options: Option) => void;
+    selected: string;
+    setSelected: (options: string) => void;
     options: Option[];
     default: string;
 }
 
 const SelectButton: React.FC<SelectButtonProps> = ({ selected, setSelected, options, default: defaultText }) => {
-  
+
+    const getDisplayName = () => {
+        if (!selected) return defaultText;
+        const selectedOption = options.find(option => option.value === selected);
+        return selectedOption ? selectedOption.name : defaultText;
+    };
+
     return (
         <div className="flex flex-col relative w-full">
             <Listbox
                 value={selected}
-                onChange={(val: Option) => setSelected(val)}
+                onChange={(val: string) => setSelected(val)}
             >
                 <div className="relative">
                     {/* Button */}
                     <Listbox.Button className="w-full h-[50px] flex justify-between items-center px-4 py-2.5 border border-gray-300 rounded-lg bg-white cursor-pointer text-gray-700 text-sm font-medium">
-                        <span>{selected.length > 0 ? selected : defaultText}</span>
+                        <span>{getDisplayName()}</span>
                         <ChevronDownIcon className="h-5 w-5 text-gray-400" />
                     </Listbox.Button>
 
@@ -33,10 +39,10 @@ const SelectButton: React.FC<SelectButtonProps> = ({ selected, setSelected, opti
                         leaveTo="opacity-0"
                     >
                         <Listbox.Options className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none max-h-64 overflow-auto">
-                            {options.slice(1).map((item) => (
+                            {options.map((item) => (
                                 <Listbox.Option
                                     key={item.id}
-                                    value={item}
+                                    value={item.value} // FIXED: Use item.value instead of item.name
                                     className={({ active, selected: isSelected }) =>
                                         `cursor-pointer select-none py-2 px-4 text-sm
           ${active ? "bg-[#dbdbdb] text-black" : "text-gray-700"} 

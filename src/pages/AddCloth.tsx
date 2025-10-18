@@ -15,12 +15,26 @@ interface Option {
   value: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Subcategory {
+  id: string;
+  name: string;
+  category: {  // Change from category.id to category object
+    id: string;
+    name: string;
+  };
+}
+
 interface ColorSizeVariant {
   color: string;
   colorName: string;
   sizes: string[];
   imageUrls: File[];
-  imagePreviews?: string[]; // For preview only
+  imagePreviews?: string[];
 }
 
 interface FormData {
@@ -29,9 +43,16 @@ interface FormData {
   userEmail: string;
   userPhone: string;
   productCode: string;
-  subcategoryId: string;
-  price: string;
   gender: string;
+  subcategory: {
+    id: string;
+    name: string;
+    category: {
+      id: string;
+      name: string
+    }
+  };
+  price: string;
   description: string;
   offerType: string;
   condition: string;
@@ -73,11 +94,11 @@ const conditionOptions: Option[] = [
   { id: "2", name: "İkinci Əl", value: "SECOND_HAND" },
 ];
 
-const genderMap: Record<string, string> = {
-  "1": "WOMAN",
-  "2": "MAN",
-  "3": "KID",
-};
+const genderOptions: Option[] = [
+  { id: "1", name: "Qadın", value: "WOMAN" },
+  { id: "2", name: "Kişi", value: "MAN" },
+  { id: "3", name: "Uşaq", value: "KID" },
+];
 
 // ------------------- HELPERS -------------------
 const getColorClass = (colorValue: string) => {
@@ -111,60 +132,62 @@ const AddCloth: React.FC = () => {
     userEmail: "",
     userPhone: "",
     productCode: "",
-    subcategoryId: "",
-    price: "",
     gender: "",
+    subcategory: {
+      id: "",
+      name: "",
+      category: {
+        id: "",
+        name: ""
+      }
+    },
+    price: "",
     description: "",
     offerType: "",
     condition: "",
     colorAndSizes: [{ color: "BLACK", colorName: "Qara", sizes: [], imageUrls: [] }],
   });
 
-  const [_categoryOptions, setCategoryOptions] = useState([]);
-  const [_subcategoryOptions, setSubcategoryOptions] = useState([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
 
   // ------------------- EFFECTS -------------------
   useEffect(() => {
-    if (!categories.length) return;
-    const genderOpts = categories.map((c: any) => ({
-      id: String(c.id),
-      name: c.name,
-      value: String(c.id),
-    }));
-    setCategoryOptions(genderOpts);
-  }, [categories]);
+    if (!subcategories.length) return;
 
-  useEffect(() => {
-    if (!formData.gender) return;
-    const filtered = subcategories
-      .filter((sc: any) => sc.categoryId === Number(formData.gender))
-      .map((sc: any) => ({
-        id: String(sc.id),
-        name: sc.name,
-        value: String(sc.id),
-      }));
-    setSubcategoryOptions(filtered);
-  }, [formData.gender, subcategories]);
+    if (!formData.subcategory.category.id) {
+      setFilteredSubcategories(subcategories);
+    } else {
+      const filtered = subcategories.filter(
+        (sc: Subcategory) => sc.category.id === formData.subcategory.category.id
+      );
+      setFilteredSubcategories(filtered);
+    }
+  }, [formData.subcategory.category.id, subcategories]);
 
-  const categoryOpt: Option[] = [
+  // ------------------- OPTIONS FOR SELECTS -------------------
+  const genderSelectOptions: Option[] = [
     { id: "0", name: "Cins seçin", value: "" },
-    ...categories.map((c: any) => ({
-      id: String(c.id),
+    ...genderOptions,
+  ];
+
+  const categorySelectOptions: Option[] = [
+    { id: "0", name: "Kateqoriya seçin", value: "" },
+    ...categories.map((c: Category) => ({
+      id: c.id,
       name: c.name,
-      value: String(c.id),
+      value: c.id,
     })),
   ];
 
-  const subcategoryOpt: Option[] = [
-    { id: "0", name: "Kateqoriya seçin", value: "" }, // placeholder
-    ...subcategories
-      .filter((sc: any) => !formData.gender || sc.categoryId === Number(formData.gender))
-      .map((sc: any) => ({
-        id: String(sc.id),
-        name: sc.name,
-        value: String(sc.id),
-      })),
+  const subcategorySelectOptions: Option[] = [
+    { id: "0", name: "Alt kateqoriya seçin", value: "" },
+    ...filteredSubcategories.map((sc: Subcategory) => ({
+      id: sc.id,
+      name: sc.name,
+      value: sc.id,
+    })),
   ];
+
 
   // ------------------- HANDLERS -------------------
   const handleChange = (e: any) => {
@@ -172,6 +195,44 @@ const AddCloth: React.FC = () => {
     const cleanValue = value.replace(/[^a-zA-ZƏÖÜŞÇĞİəöüşıçğİ\s]/g, "");
 
     setFormData((prev) => ({ ...prev, [name]: cleanValue }));
+  };
+
+  const handleGenderSelect = (value: string) => {
+    setFormData(prev => ({ ...prev, gender: value }));
+  };
+
+  const handleCategorySelect = (value: string) => {
+
+    const selectedCategory = categories.find((c: Category) => c.id === value);
+
+    setFormData(prev => ({
+      ...prev,
+      subcategory: {
+        id: "",
+        name: "",
+        category: selectedCategory ? {
+          id: selectedCategory.id,
+          name: selectedCategory.name
+        } : { id: "", name: "" }
+      },
+    }));
+  };
+
+  const handleSubcategorySelect = (value: string) => {
+
+    const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === value);
+
+    setFormData(prev => ({
+      ...prev,
+      subcategory: selectedSubcategory ? {
+        id: selectedSubcategory.id,
+        name: selectedSubcategory.name,
+        category: {
+          id: selectedSubcategory.category.id,
+          name: categories.find((c: Category) => c.id === selectedSubcategory.category.id)?.name || ""
+        }
+      } : { id: "", name: "", category: { id: "", name: "" } }
+    }));
   };
 
   const handleColorSelect = (colorValue: string) => {
@@ -265,7 +326,8 @@ const AddCloth: React.FC = () => {
 
     // Selects
     if (!formData.gender) newErrors.gender = "Cins seçin";
-    if (!formData.subcategoryId) newErrors.subcategoryId = "Kateqoriya seçin";
+    if (!formData.subcategory.category.id) newErrors.category = "Kateqoriya seçin";
+    if (!formData.subcategory) newErrors.subcategory = "Alt kateqoriya seçin";
     if (!formData.offerType) newErrors.offerType = "İstifadə forması seçin";
     if (!formData.condition) newErrors.condition = "Vəziyyət seçin";
 
@@ -316,19 +378,22 @@ const AddCloth: React.FC = () => {
       return;
     }
 
-    const expandedColorAndSizes = formData.colorAndSizes.map(cs => ({
-      color: cs.color,
-      size: cs.sizes,
-      imageFiles: cs.imageUrls,
-    }));
+    const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === formData.subcategory.id);
 
     const payload = {
       userName: formData.userName,
       userSurname: formData.userSurname,
       userEmail: formData.userEmail,
       userPhone: `+994${formData.userPhone}`,
-      subcategoryId: Number(formData.subcategoryId),
-      gender: genderMap[formData.gender] || null,
+      gender: formData.gender,
+      subcategory: selectedSubcategory ? {
+        id: selectedSubcategory.id,
+        name: selectedSubcategory.name,
+        category: {
+          id: selectedSubcategory.category.id,
+          name: selectedSubcategory.category.name
+        }
+      } : null,
       offerType: formData.offerType,
       condition: formData.condition,
       price: formData.price,
@@ -341,24 +406,27 @@ const AddCloth: React.FC = () => {
           rentDuration: formData.offerType === "RENT" ? 1 : undefined,
         },
       ],
-      colorAndSizes: expandedColorAndSizes.map(c => ({
-        color: c.color,
-        size: c.size.join(","),
-      }))
-
+      colorAndSizes: formData.colorAndSizes.map(cs => ({
+        color: cs.color,
+        sizes: cs.sizes,
+        imageUrls: []
+      })),
     };
 
     const formPayload = new FormData();
     formPayload.append("product", new Blob([JSON.stringify(payload)], { type: "application/json" }));
 
-    expandedColorAndSizes.forEach(entry => {
-      if (entry.imageFiles && entry.imageFiles.length > 0) {
-        const colorKey = entry.color;
-        const sizeKey = entry.size;
+    formData.colorAndSizes.forEach(cs => {
+      if (cs.imageUrls && cs.imageUrls.length > 0) {
+        const colorKey = cs.color;
+        const sizeKey = cs.sizes.join("_");
         const key = `images_${colorKey}_${sizeKey}`;
-        entry.imageFiles.forEach((file: File) => {
-          formPayload.append(key, file, file.name);
+
+        cs.imageUrls.forEach((file: File) => {
+          formPayload.append(key, file);
         });
+
+        console.log(`Added ${cs.imageUrls.length} images for key: ${key}`);
       }
     });
 
@@ -376,9 +444,16 @@ const AddCloth: React.FC = () => {
         userEmail: "",
         userPhone: "",
         productCode: "",
-        subcategoryId: "",
-        price: "",
         gender: "",
+        subcategory: {
+          id: "",
+          name: "",
+          category: {
+            id: "",
+            name: ""
+          }
+        },
+        price: "",
         description: "",
         offerType: "",
         condition: "",
@@ -405,8 +480,8 @@ const AddCloth: React.FC = () => {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-10" encType="multipart/form-data">
-        {/* Contact Info - Same as before */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* Contact Info */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Ad</label>
             <input
@@ -479,53 +554,48 @@ const AddCloth: React.FC = () => {
             )}
           </div>
 
-          {/* Category & Gender - Same as before */}
+          {/* Gender, Category & Subcategory */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Cins</label>
             <SelectButton
-              selected={formData.gender || ""} // must match placeholder value ("")
-              setSelected={(value) => {
-                setFormData(prev => ({
-                  ...prev,
-                  gender: value,
-                  subcategoryId: "", // reset subcategory if gender changes
-                }));
-              }}
-              options={categoryOpt}
+              selected={formData.gender}
+              setSelected={handleGenderSelect}
+              options={genderSelectOptions}
+              default="Cins"
             />
-
             {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Kateqoriya</label>
             <SelectButton
-              selected={formData.subcategoryId || ""} // value must match placeholder value
-              setSelected={(value) =>
-                setFormData(prev => ({
-                  ...prev,
-                  subcategoryId: value,
-                }))
-              }
-              options={subcategoryOpt}
+              selected={formData.subcategory.category.id} // Ensure it's a string
+              setSelected={handleCategorySelect}
+              options={categorySelectOptions}
+              default="Kateqoriya"
             />
-            {errors.subcategoryId && <p className="text-red-500 text-sm mt-1">{errors.subcategoryId}</p>}
+            {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
           </div>
 
-          {/* Offer Type & Condition - Same as before */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">Alt Kateqoriya</label>
+            <SelectButton
+              selected={formData.subcategory.id} // Ensure it's a string
+              setSelected={handleSubcategorySelect}
+              options={subcategorySelectOptions}
+              default="Alt Kateqoriya"
+            />
+            {errors.subcategory && <p className="text-red-500 text-sm mt-1">{errors.subcategory}</p>}
+          </div>
+
+          {/* Offer Type & Condition */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">İstifadə forması</label>
             <SelectButton
-              selected={formData.offerType || ""}
+              selected={formData.offerType}
               setSelected={(value) => setFormData(prev => ({ ...prev, offerType: value }))}
-              options={[
-                { id: "0", name: "İstifadə forması", value: "" },
-                ...offerTypeOptions.map(o => ({
-                  id: o.id,
-                  name: o.name,
-                  value: o.value,
-                })),
-              ]}
+              options={offerTypeOptions}
+              default="İstifadə forması"
             />
             {errors.offerType && (
               <p className="text-red-500 text-sm mt-1">{errors.offerType}</p>
@@ -537,52 +607,48 @@ const AddCloth: React.FC = () => {
             <SelectButton
               selected={formData.condition}
               setSelected={(value) => setFormData(prev => ({ ...prev, condition: value }))}
-              options={[
-                { id: "0", name: "Vəziyyət", value: "" },
-                ...conditionOptions.map(o => ({
-                  id: o.id,
-                  name: o.name,
-                  value: o.value,
-                }))
-              ]}
+              options={conditionOptions}
+              default="Vəziyyət"
             />
             {errors.condition && (
               <p className="text-red-500 text-sm mt-1">{errors.condition}</p>
             )}
           </div>
 
-          {/* Color */}
-          <h3 className="col-span-1 col-span-2 text-lg font-medium">Rəng Seçimi</h3>
-          <div className="grid grid-cols-6 gap-4 mb-2 bg-white border border-[#D4D4D4] rounded-lg p-5">
-            {colorOptions.map((color) => (
-              <div
-                key={color.id}
-                className={`relative cursor-pointer ${formData.colorAndSizes.some(cs => cs.color === color.value)}`}
-                onClick={() => handleColorSelect(color.value)}
-              >
-                <div className={`w-[32px] h-[32px] rounded-lg ${getColorClass(color.value)}`} />
-                {formData.colorAndSizes.some(cs => cs.color === color.value) && (
-                  <div className={`w-[32px] h-[32px] absolute inset-0 flex items-center justify-center bg-opacity-30 rounded-lg`}>
-                    <CheckIcon className="text-white" />
-                  </div>
-                )}
-              </div>
-            ))}
+          {/* Color Selection */}
+          <div className="col-span-1 sm:col-span-2">
+            <h3 className="text-lg font-medium mb-4">Rəng Seçimi</h3>
+            <div className="grid grid-cols-6 gap-4 mb-2 bg-white border border-[#D4D4D4] rounded-lg p-5">
+              {colorOptions.map((color) => (
+                <div
+                  key={color.id}
+                  className="relative cursor-pointer"
+                  onClick={() => handleColorSelect(color.value)}
+                >
+                  <div className={`w-[32px] h-[32px] rounded-lg ${getColorClass(color.value)}`} />
+                  {formData.colorAndSizes.some(cs => cs.color === color.value) && (
+                    <div className="w-[32px] h-[32px] absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                      <CheckIcon className="text-white w-5 h-5" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {errors.colorAndSizes && (
+              <p className="text-red-500 text-sm mb-4">{errors.colorAndSizes}</p>
+            )}
           </div>
-          {errors.colorAndSizes && (
-            <p className="text-red-500 text-sm mb-4">{errors.colorAndSizes}</p>
-          )}
 
           {/* Color Variants */}
           {formData.colorAndSizes.map((cs, index) => (
-            <div key={cs.color} className="col-span-2 relative mb-6">
+            <div key={cs.color} className="col-span-1 sm:col-span-2 relative mb-6">
               <div className="flex items-center gap-3 mb-4">
                 <h4 className="font-medium text-md">Rəng: {cs.colorName}</h4>
                 <div className={`w-8 h-8 rounded-lg ${getColorClass(cs.color)} border border-gray-300`} />
               </div>
 
               {/* Sizes */}
-              <div className="w-full md:w-[50%] grid grid-cols-1 gap-3 mb-4">
+              <div className="w-full grid grid-cols-1 gap-3 mb-4">
                 <label className="text-md font-medium">Ölçülər</label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                   {sizeOptions.map((size) => (
@@ -683,7 +749,7 @@ const AddCloth: React.FC = () => {
               value={formData.description}
               onChange={(e) => {
                 const { name, value } = e.target;
-                setFormData({ ...formData, [name]: value });
+                setFormData(prev => ({ ...prev, [name]: value }));
               }}
               className="px-4 py-3 bg-white border rounded-lg outline-none border-[#D4D4D4] h-[100px]"
             />
@@ -691,7 +757,6 @@ const AddCloth: React.FC = () => {
               <p className="text-red-500 text-sm mt-1">{errors.description}</p>
             )}
           </div>
-
         </div>
 
         <div className="text-end">

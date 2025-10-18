@@ -6,8 +6,6 @@ import Wishlist from "./pages/Wishlist";
 import ProductDetails from "./pages/ProductDetails";
 import preloader from "./assets/img/preloader.gif";
 import { useEffect, useState } from "react";
-// import Login from "./pages/Login";
-// import Register from "./pages/Register";
 import AdminPanel from "./pages/auth/AdminPanel";
 import AdminLogin from "./pages/auth/AdminLogin";
 import AdminAccess from "./pages/auth/AdminAccess";
@@ -17,7 +15,6 @@ import CategoryManagement from "./pages/auth/CategoryManagement";
 import SubcategoryManagement from "./pages/auth/SubcategoryManagement";
 import ProductManagement from "./pages/auth/ProductManagement";
 import SearchResults from "./pages/SearchResults";
-import Test from "./pages/Test";
 
 const Router = () => {
   const [loading, setLoading] = useState(true);
@@ -55,7 +52,6 @@ const Router = () => {
             </Route>
 
             <Route path="/" element={<Home />} />
-            <Route path="/test" element={<Test />} />
             <Route path="/:urlid" element={<ProductDetails />} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/add-cloth" element={<AddCloth />} />

@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 
 const CategoryManagement = () => {
     const { data: categories = [] } = useGetCategoriesQuery([]);
+console.log(categories);
 
     const [addCategories, { isLoading }] = useAddCategoriesMutation();
     const [deleteCategory] = useDeleteCategoriesMutation();

@@ -6,6 +6,7 @@ import { useGetSubcategoriesQuery } from "../../tools/subCategory";
 const ProductManagement = () => {
     const { data: allproducts = [], refetch } = useGetAllProductsQuery([]);
     const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+console.log(allproducts);
 
     const [deleteProduct, { isLoading: isDeleted }] = useDeleteProductsMutation();
     const [approveProduct, { isLoading: isApproved }] = useApproveProductMutation();

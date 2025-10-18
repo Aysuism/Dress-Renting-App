@@ -40,19 +40,20 @@ const ProductDetails = () => {
     const product: Product | undefined = products.find((p: any) =>
         slugify(String(p.productCode), { lower: true }) === slugify(String(urlid), { lower: true })
     );
+    console.log(product);
+    
 
     if (!product) return <Navigate to="/not-found" replace />;
 
     const subcategoryName = subcategories?.find((sc: any) => sc.id === product.subcategoryId)?.name;
 
-    // Sizes and Images per Color
     const colorAndSizes = product.colorAndSizes as any;
     const colors = Array.from(new Set(colorAndSizes.map((item: any) => item.color))) as string[];
     const activeColor = selectedColor || colors[0];
 
     const availableSizes = colorAndSizes
         .filter((cs: any) => cs.color === activeColor)
-        .flatMap((cs: any) => cs.size.split(",").map((s: any) => s.trim()).filter(Boolean));
+        .map((cs: any) => cs.sizes.map((item:any)=>item.size));
 
     const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
 
@@ -72,15 +73,15 @@ const ProductDetails = () => {
                         <img
                             src={images[selectedImage]}
                             alt={activeColor as string}
-                            className="w-full h-[400px] object-cover transition-transform duration-200 hover:scale-105"
+                            className="w-full h-[400px] object-contain cursor-pointer transition-transform duration-200 hover:scale-105"
                         />
                     </div>
 
                     <div className="grid grid-cols-4 gap-2">
                         {images.map((imgSrc: any, idx: number) => (
                             <button key={idx} onClick={() => setSelectedImage(idx)}
-                                className={`rounded-md overflow-hidden ${selectedImage === idx ? "border border-gray-300" : ""}`}>
-                                <img src={imgSrc} alt={`Thumbnail ${idx}`} className="w-full h-16 object-cover" />
+                                className={`rounded-md overflow-hidden border cursor-pointer ${selectedImage === idx ? "border-black" : "border-gray-300"}`}>
+                                <img src={imgSrc} alt={`Thumbnail ${idx}`} className="w-full h-16 object-contain" />
                             </button>
                         ))}
                     </div>
