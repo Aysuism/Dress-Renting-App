@@ -4,7 +4,6 @@ import { useApproveProductMutation, useDisapproveProductMutation, useGetAllProdu
 
 const ProductManagement = () => {
     const { data: allproducts = [], refetch } = useGetAllProductsQuery([]);
-    console.log(allproducts);
 
     const [deleteProduct, { isLoading: isDeleted }] = useDeleteProductsMutation();
     const [approveProduct, { isLoading: isApproved }] = useApproveProductMutation();

@@ -9,6 +9,7 @@ import Fuse from "fuse.js";
 import { useGetCategoriesQuery } from "../tools/categories";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { jwtDecode } from "jwt-decode";
+import { useGetProductsQuery } from "../tools/product";
 
 export interface HeaderProps {
   showSection: (section: string) => void;
@@ -17,9 +18,10 @@ export interface HeaderProps {
 interface SearchItem {
   id: string;
   name: string;
-  type: 'category' | 'subcategory';
+  type: 'category' | 'subcategory' | 'product';
   categoryId?: string;
   categoryName?: string;
+  productCode?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({ showSection }) => {
@@ -31,6 +33,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
   const { data: categories = [] } = useGetCategoriesQuery([]);
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+  const { data: products = [] } = useGetProductsQuery([]);
 
   // ------------------ User/Admin ------------------
   const checkUser = useCallback(() => {
@@ -97,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
   // ---------------- SEARCH ----------------
   const searchItems: SearchItem[] = useMemo(() => {
-    if (!categories?.length && !subcategories?.length) return [];
+    if (!categories?.length && !subcategories?.length && !products?.length) return [];
 
     const categoryItems: SearchItem[] = categories.map((cat: any) => ({
       id: String(cat.id),
@@ -113,13 +116,21 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
       categoryName: sub.category?.name
     }));
 
-    return [...categoryItems, ...subcategoryItems];
-  }, [categories, subcategories]);
+    // Add product items for product code search
+    const productItems: SearchItem[] = products.map((product: any) => ({
+      id: String(product.id || product.productCode),
+      name: `${product.productCode} - ${product.userName} ${product.userSurname}`,
+      type: 'product' as const,
+      productCode: product.productCode
+    }));
+
+    return [...categoryItems, ...subcategoryItems, ...productItems];
+  }, [categories, subcategories, products]);
 
   const fuse = useMemo(() => {
     if (!searchItems.length) return null;
     return new Fuse(searchItems, {
-      keys: ['name'],
+      keys: ['name', 'productCode'],
       threshold: 0.3,
       includeScore: true,
     });
@@ -140,6 +151,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
   const handleResultClick = (item: SearchItem) => {
     setKeyword("");
     setShowResults(false);
+
+    if (item.type === 'product') {
+      navigate(`/searching-result?productCode=${item.productCode}`);
+      return;
+    }
 
     const genderMap: { [key: string]: string } = {
       "1": "MAN",
@@ -202,7 +218,19 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleResultClick(item)}
                 >
-                  {item.name}
+                  <div className="flex justify-between items-center">
+                    <span>{item.name}</span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {item.type === 'category' ? 'Kateqoriya' :
+                        item.type === 'subcategory' ? 'Alt Kateqoriya' :
+                          'Məhsul Kodu'}
+                    </span>
+                  </div>
+                  {item.type === 'subcategory' && item.categoryName && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {item.categoryName}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -305,12 +333,21 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                   key={`${item.type}-${item.id}`}
                   className="cursor-pointer px-4 py-2 hover:bg-gray-100"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    handleResultClick(item);
-                    setSidebarOpen(false);
-                  }}
+                  onClick={() => handleResultClick(item)}
                 >
-                  {item.name}
+                  <div className="flex justify-between items-center">
+                    <span>{item.name}</span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {item.type === 'category' ? 'Kateqoriya' :
+                        item.type === 'subcategory' ? 'Alt Kateqoriya' :
+                          'Məhsul Kodu'}
+                    </span>
+                  </div>
+                  {item.type === 'subcategory' && item.categoryName && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {item.categoryName}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

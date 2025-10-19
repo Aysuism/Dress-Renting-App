@@ -42,9 +42,6 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
     }
   };
 
-  console.log(clothes);
-
-
   return (
     <Link to={`/${slugify(String(clothes.productCode), { lower: true })}`}
       className="bg-white rounded-2xl border border-[#D1D5DC] cursor-pointer p-4">

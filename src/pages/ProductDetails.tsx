@@ -47,8 +47,6 @@ const ProductDetails = () => {
     const product: Product | undefined = products.find((p: any) =>
         slugify(String(p.productCode), { lower: true }) === slugify(String(urlid), { lower: true })
     );
-    console.log(product);
-
 
     if (!product) return <Navigate to="/not-found" replace />;
 
