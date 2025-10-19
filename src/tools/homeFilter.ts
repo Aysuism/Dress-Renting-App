@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export interface ColorAndSize {
   color: string;
-  size: string;
+  sizes: string[];
   imageUrls: string[];
 }
 
@@ -20,7 +20,14 @@ export interface Product {
   userEmail: string;
   userPhone: string;
   productCode: string;
-  subcategoryId: number;
+  subcategory:{
+    id: number;
+    name: string;
+    category: {
+      id: number;
+      name: string;
+    };
+  };
   categoryId: number;
   price: number;
   gender: string;

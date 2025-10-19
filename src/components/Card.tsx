@@ -15,19 +15,19 @@ interface CardProps {
 const Card: React.FC<CardProps> = ({ clothes }) => {
   const { addWishlistItem, removeWishlistItem, inWishlist } = useWishlist();
   const mainColor = clothes.colorAndSizes.map(item => item.color);
-  const mainSizes = clothes.colorAndSizes.map(item => item.size).join(",");
+  const mainSizes = clothes.colorAndSizes.flatMap(item => item.sizes).join(", ");
   const mainColorImage = clothes.colorAndSizes[0]?.imageUrls[0];
 
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
 
 
-  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategoryId)?.name;
+  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategory.id)?.name;
 
   const wishlistItem = {
     id: clothes.productCode,
     price: clothes.price,
     image: mainColorImage,
-    category: clothes.subcategoryId,
+    category: clothes.subcategory.name,
     colors: mainColor,
     size: mainSizes,
   };

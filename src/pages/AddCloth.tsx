@@ -683,7 +683,7 @@ const AddCloth: React.FC = () => {
 
                 {/* Image Upload Area */}
                 <label className="flex flex-col gap-2 items-center justify-center h-[100px] border-2 border-dashed border-black rounded-[16px] cursor-pointer text-center text-gray-500 hover:bg-gray-100">
-                  <span>Şəkil yükləmək üçün seçin və ya buraya sürükləyin</span>
+                  <span className="px-5">Şəkil yükləmək üçün seçin və ya buraya sürükləyin</span>
                   <input
                     type="file"
                     multiple
