@@ -17,7 +17,7 @@ const sizeOptionsList: Option[] = [
   { id: "6", name: "XXL", value: "XXL" },
 ];
 
-const genderOptions: Option[] = [
+export const genderOptions: Option[] = [
   { id: "1", name: "Qadın", value: "WOMAN" },
   { id: "2", name: "Kişi", value: "MAN" },
   { id: "3", name: "Uşaq", value: "KID" },
@@ -46,20 +46,20 @@ const Home = () => {
     value: String(cat.id),
   }));
 
-const filteredSubcategories: Option[] = selectedCategory
-  ? subcategories
-    .filter((sub: any) => String(sub.category.id) === selectedCategory)
-    .map((sub: any) => ({
-      id: String(sub.id),
-      name: sub.name,
-      value: String(sub.id),
-    }))
-  : subcategories.map((sub: any) => ({
+  const filteredSubcategories: Option[] = selectedCategory
+    ? subcategories
+      .filter((sub: any) => String(sub.category.id) === selectedCategory)
+      .map((sub: any) => ({
+        id: String(sub.id),
+        name: sub.name,
+        value: String(sub.id),
+      }))
+    : subcategories.map((sub: any) => ({
       id: String(sub.id),
       name: sub.name,
       value: String(sub.id),
     }));
-    
+
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -89,6 +89,7 @@ const filteredSubcategories: Option[] = selectedCategory
   );
 
   const displayProducts = selectedGender || selectedCategory || selectedSubcategory || selectedColor || selectedSize || minPrice || maxPrice ? filteredProducts : products;
+
   return (
     <div className="flex flex-col py-10">
       {/* Filters */}

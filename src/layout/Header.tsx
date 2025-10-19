@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import { Link, useNavigate } from "react-router-dom";
@@ -14,60 +14,72 @@ export interface HeaderProps {
   showSection: (section: string) => void;
 }
 
+interface SearchItem {
+  id: string;
+  name: string;
+  type: 'category' | 'subcategory';
+  categoryId?: string;
+  categoryName?: string;
+}
+
 const Header: React.FC<HeaderProps> = ({ showSection }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
-  const searchRef = useRef<HTMLDivElement>(null);
 
   const { data: categories = [] } = useGetCategoriesQuery([]);
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
 
   // ------------------ User/Admin ------------------
-  useEffect(() => {
-    const checkUser = () => {
-      const token = localStorage.getItem("token");
-      const storedUser = localStorage.getItem("loggedInUser");
+  const checkUser = useCallback(() => {
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("loggedInUser");
 
-      const isTokenValid = (token: string) => {
-        try {
-          const decoded: { exp: number; role?: string } = jwtDecode(token);
-          return decoded.exp > Date.now() / 1000;
-        } catch {
-          return false;
-        }
-      };
-
-      if (!token || !isTokenValid(token)) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("loggedInUser");
-        setIsAdmin(false);
-        return;
-      }
-
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          setIsAdmin(user.role === "ADMIN");
-        } catch {
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
+    const isTokenValid = (token: string) => {
+      try {
+        const decoded: { exp: number; role?: string } = jwtDecode(token);
+        return decoded.exp > Date.now() / 1000;
+      } catch {
+        return false;
       }
     };
 
+    if (!token || !isTokenValid(token)) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("loggedInUser");
+      setIsAdmin(false);
+      return;
+    }
+
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setIsAdmin(user.role === "ADMIN");
+      } catch {
+        setIsAdmin(false);
+      }
+    } else {
+      setIsAdmin(false);
+    }
+  }, []);
+
+  useEffect(() => {
     checkUser();
-    window.addEventListener("userLoggedIn", checkUser);
-    window.addEventListener("storage", checkUser);
+
+    const handleUserEvent = () => checkUser();
+
+    window.addEventListener("userLoggedIn", handleUserEvent);
+    window.addEventListener("storage", handleUserEvent);
+    window.addEventListener("userLoggedOut", handleUserEvent);
 
     return () => {
-      window.removeEventListener("userLoggedIn", checkUser);
-      window.removeEventListener("storage", checkUser);
+      window.removeEventListener("userLoggedIn", handleUserEvent);
+      window.removeEventListener("storage", handleUserEvent);
+      window.removeEventListener("userLoggedOut", handleUserEvent);
     };
-  }, []);
+  }, [checkUser]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -84,48 +96,76 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
   };
 
   // ---------------- SEARCH ----------------
-  const fuseData = [
-    ...categories.map((c: any) => ({ type: "category", id: c.id, name: c.name })),
-    ...subcategories.map((s: any) => ({
-      type: "subcategory",
-      id: s.id,
-      name: s.name,
-      categoryId: s.categoryId,
-    })),
-  ];
+  const searchItems: SearchItem[] = useMemo(() => {
+    if (!categories?.length && !subcategories?.length) return [];
 
-  const fuse = new Fuse(fuseData, {
-    keys: ["name"],
-    threshold: 0.4,
-  });
+    const categoryItems: SearchItem[] = categories.map((cat: any) => ({
+      id: String(cat.id),
+      name: cat.name,
+      type: 'category' as const
+    }));
 
-  const filteredResults = keyword ? fuse.search(keyword).map(r => r.item) : [];
+    const subcategoryItems: SearchItem[] = subcategories.map((sub: any) => ({
+      id: String(sub.id),
+      name: sub.name,
+      type: 'subcategory' as const,
+      categoryId: String(sub.category?.id),
+      categoryName: sub.category?.name
+    }));
+
+    return [...categoryItems, ...subcategoryItems];
+  }, [categories, subcategories]);
+
+  const fuse = useMemo(() => {
+    if (!searchItems.length) return null;
+    return new Fuse(searchItems, {
+      keys: ['name'],
+      threshold: 0.3,
+      includeScore: true,
+    });
+  }, [searchItems]);
+
+  const filteredResults = useMemo(() => {
+    if (!keyword.trim() || !fuse) return [];
+    const results = fuse.search(keyword);
+    return results.map(result => result.item);
+  }, [fuse, keyword]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setKeyword(e.target.value);
-    setShowResults(e.target.value.length > 0);
+    const value = e.target.value;
+    setKeyword(value);
+    setShowResults(value.length > 0);
   };
 
-  const handleResultClick = (item: any) => {
+  const handleResultClick = (item: SearchItem) => {
     setKeyword("");
     setShowResults(false);
 
-    // Map category IDs to gender values
-    const categoryToGenderMap: { [key: string]: string } = {
-      "1": "MAN",      // Kişi category
-      "2": "WOMAN",    // Qadın category  
-      "3": "KID"       // Uşaq category
+    const genderMap: { [key: string]: string } = {
+      "1": "MAN",
+      "2": "WOMAN",
+      "3": "KID",
     };
 
-    if (item.type === "category") {
-      // Navigate to search results with gender filter (since products use gender, not categoryId)
-      const gender = categoryToGenderMap[item.id];
-      navigate(`/searching-result?gender=${gender}&categoryName=${encodeURIComponent(item.name)}`);
-    } else if (item.type === "subcategory") {
-      // Navigate to search results with subcategory filter
-      navigate(`/searching-result?subcategory=${item.id}&subcategoryName=${encodeURIComponent(item.name)}`);
+    const gender = "";
+    const queryParams = new URLSearchParams();
+
+    if (gender) {
+      queryParams.append('gender', genderMap[gender] || gender);
     }
+
+    if (item.type === 'category') {
+      queryParams.append('categoryName', item.name);
+    } else if (item.type === 'subcategory') {
+      if (item.categoryName) {
+        queryParams.append('categoryName', item.categoryName);
+      }
+      queryParams.append('subcategoryName', item.name);
+    }
+
+    navigate(`/searching-result?${queryParams.toString()}`);
   };
+
   // ---------------- UI ----------------
   return (
     <header className="px-6 py-4 bg-white sticky top-0 z-50">
@@ -136,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
         </Link>
 
         {/* Desktop search */}
-        <div className="relative mx-4 hidden md:block" ref={searchRef}>
+        <div className="relative mx-4 hidden md:block">
           <div className="relative">
             <input
               type="text"
@@ -144,7 +184,10 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
               className="w-full lg:w-[444px] px-10 py-2 pl-10 border border-gray-400 rounded-lg outline-none focus:ring-1"
               value={keyword}
               onChange={handleSearch}
-              onFocus={handleSearch}
+              onFocus={() => setShowResults(true)}
+              onBlur={() => {
+                setTimeout(() => setShowResults(false), 200);
+              }}
             />
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
@@ -152,10 +195,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
           {/* Search results */}
           {showResults && filteredResults.length > 0 && (
             <ul className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-gray-200">
-              {filteredResults.map((item: any) => (
+              {filteredResults.map((item: SearchItem) => (
                 <li
                   key={`${item.type}-${item.id}`}
                   className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleResultClick(item)}
                 >
                   {item.name}
@@ -238,14 +282,17 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
         </Link>
 
         {/* Mobile search */}
-        <div className="relative" ref={searchRef}>
+        <div className="relative">
           <div className="flex items-center border border-gray-400 text-gray-400 rounded-lg px-2 py-2 focus-within:ring-1 transition-all">
             <SearchIcon className="mr-2" />
             <input
               type="text"
               value={keyword}
               onChange={handleSearch}
-              onFocus={handleSearch}
+              onFocus={() => setShowResults(true)}
+              onBlur={() => {
+                setTimeout(() => setShowResults(false), 200);
+              }}
               placeholder="Secondhand-də axtar"
               className="flex-1 bg-transparent outline-none text-sm"
             />
@@ -253,10 +300,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
           {showResults && filteredResults.length > 0 && (
             <ul className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-gray-200">
-              {filteredResults.map((item: any) => (
+              {filteredResults.map((item: SearchItem) => (
                 <li
                   key={`${item.type}-${item.id}`}
                   className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     handleResultClick(item);
                     setSidebarOpen(false);
