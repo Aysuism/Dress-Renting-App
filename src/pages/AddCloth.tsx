@@ -396,12 +396,12 @@ const AddCloth: React.FC = () => {
       } : null,
       offerType: formData.offerType,
       condition: formData.condition,
-      price: formData.price,
+      price: Number(formData.price), // Force to number
       description: formData.description,
       productOffers: [
         {
           offerType: formData.offerType,
-          price: formData.price,
+          price: Number(formData.price), // Force to number
           condition: formData.condition,
           rentDuration: formData.offerType === "RENT" ? 1 : undefined,
         },
@@ -425,17 +425,21 @@ const AddCloth: React.FC = () => {
         cs.imageUrls.forEach((file: File) => {
           formPayload.append(key, file);
         });
-
-        console.log(`Added ${cs.imageUrls.length} images for key: ${key}`);
       }
     });
 
     try {
-      await addProducts(formPayload).unwrap();
+      const response = await addProducts(formPayload).unwrap();
+      const productCode = response.productCode || response.id || response.code;
+
       Swal.fire({
         icon: "success",
         title: "Uğurla göndərildi!",
-        timer: 2000,
+        html: productCode
+          ? `Məhsulunuz əlavə edildi.<br><strong>Məhsul Kodu: ${productCode}</strong>`
+          : "Məhsulunuz əlavə edildi",
+        showConfirmButton: true,
+        confirmButtonText: "OK",
       });
 
       setFormData({
@@ -727,9 +731,12 @@ const AddCloth: React.FC = () => {
             <input
               type="number"
               name="price"
+              step="0.01"
+              min="0"
               value={formData.price}
               onChange={(e) => {
                 const value = e.target.value;
+                // Allow numbers and decimal point
                 if (/^\d*\.?\d*$/.test(value)) {
                   setFormData((prev) => ({ ...prev, price: value }));
                 }

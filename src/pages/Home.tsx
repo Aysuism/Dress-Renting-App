@@ -94,7 +94,7 @@ const Home = () => {
     <div className="flex flex-col py-10">
       {/* Filters */}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 p-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 py-3">
         {/* Gender */}
         <SelectButton
           options={genderOptions}

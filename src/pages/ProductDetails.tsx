@@ -11,18 +11,25 @@ import { useGetProductsQuery } from "../tools/product";
 import type { ColorAndSize, Offer } from "../tools/homeFilter";
 
 export interface Product {
-  userName: string;
-  userSurname: string;
-  userEmail: string;
-  userPhone: string;
-  productCode: string;
-  subcategoryId: string;
-  price: number;
-  gender: "WOMAN" | "MAN" | "KID";
-  description:string;
-  colorAndSizes: ColorAndSize[];
-  createdAt: string;
-  offers: Offer[];
+    userName: string;
+    userSurname: string;
+    userEmail: string;
+    userPhone: string;
+    productCode: string;
+    subcategory: {
+        id: number;
+        name: string;
+        category: {
+            id: number;
+            name: string
+        };
+    };
+    price: number;
+    gender: "WOMAN" | "MAN" | "KID";
+    description: string;
+    colorAndSizes: ColorAndSize[];
+    createdAt: string;
+    offers: Offer[];
 }
 
 const ProductDetails = () => {
@@ -41,11 +48,11 @@ const ProductDetails = () => {
         slugify(String(p.productCode), { lower: true }) === slugify(String(urlid), { lower: true })
     );
     console.log(product);
-    
+
 
     if (!product) return <Navigate to="/not-found" replace />;
 
-    const subcategoryName = subcategories?.find((sc: any) => sc.id === product.subcategoryId)?.name;
+    const subcategoryName = subcategories?.find((sc: any) => sc.id === product.subcategory.id)?.name;
 
     const colorAndSizes = product.colorAndSizes as any;
     const colors = Array.from(new Set(colorAndSizes.map((item: any) => item.color))) as string[];
@@ -53,7 +60,7 @@ const ProductDetails = () => {
 
     const availableSizes = colorAndSizes
         .filter((cs: any) => cs.color === activeColor)
-        .map((cs: any) => cs.sizes.map((item:any)=>item.size));
+        .map((cs: any) => cs.sizes.map((item: any) => item.size));
 
     const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
 
@@ -109,8 +116,8 @@ const ProductDetails = () => {
                     </div>
 
                     {/* Colors */}
-                    <div className="flex">
-                        <p className="text-[20px] font-medium mr-3">Rəng:</p>
+                    <div className="flex items-center">
+                        <p className="font-medium mr-3">Rəng:</p>
                         <div className="flex gap-2">
                             {colors.map((color, idx) => (
                                 <div key={idx} onClick={() => { setSelectedColor(color); setSelectedImage(0); }}
@@ -121,14 +128,24 @@ const ProductDetails = () => {
                         </div>
                     </div>
 
+                    <div className="flex items-center">
+                        <p className="font-medium mr-3">Məhsul kodu:</p>
+
+                        <span className="">{product.productCode}</span>
+                    </div>
+
                     {/* Sizes */}
-                    <div className="flex flex-wrap gap-2 my-10">
-                        {["XS", "S", "M", "L", "XL", "XXL"].map(size => (
-                            <div key={size}
-                                className={`w-[72px] h-[42px] rounded-md font-medium flex items-center justify-center ${availableSizes.includes(size) ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}>
-                                {size}
-                            </div>
-                        ))}
+                    <div>
+                        <p className="font-medium">Ölçü:</p>
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                            {["XS", "S", "M", "L", "XL", "XXL"].map(size => (
+                                <div key={size}
+                                    className={`w-[72px] h-[42px] rounded-md font-medium flex items-center justify-center ${availableSizes.includes(size) ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}>
+                                    {size}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Note */}
@@ -138,7 +155,7 @@ const ProductDetails = () => {
                     </div>
 
                     {/* Contact Info */}
-                    <div className="bg-white p-4 rounded-lg border border-gray-300">
+                    <div className="grid gap-3 bg-white p-4 rounded-lg border border-gray-300">
                         <p className="mb-1 font-semibold">{product.userName} {product.userSurname}</p>
                         <a href={`mailto:${product.userEmail}`} className="mb-3 flex gap-2">
                             <img src={mailIcon} alt="mail-icon" className="w-[18px] h-[14px] translate-y-[7px]" />

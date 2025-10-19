@@ -1,12 +1,10 @@
 import Swal from "sweetalert2";
 import { useDeleteProductsMutation, } from "../../tools/product";
 import { useApproveProductMutation, useDisapproveProductMutation, useGetAllProductsQuery, } from "../../tools/adminReview";
-import { useGetSubcategoriesQuery } from "../../tools/subCategory";
 
 const ProductManagement = () => {
     const { data: allproducts = [], refetch } = useGetAllProductsQuery([]);
-    const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
-console.log(allproducts);
+    console.log(allproducts);
 
     const [deleteProduct, { isLoading: isDeleted }] = useDeleteProductsMutation();
     const [approveProduct, { isLoading: isApproved }] = useApproveProductMutation();
@@ -86,7 +84,8 @@ console.log(allproducts);
                 </div>
             ) : (
                 allproducts.map((p: any) => {
-                    const subcategoryName = subcategories?.find((sc: any) => sc.id === p.subcategoryId)?.name || "Unknown";
+                    // Fix: Access the sizes array correctly
+                    const sizeInfo = p.colorAndSizes.map((cs: any) => cs.sizes.join(', '));
 
                     return (
                         <div key={p.productCode} className="border p-4 rounded-lg bg-white shadow-sm space-y-4">
@@ -99,7 +98,8 @@ console.log(allproducts);
                                     <p><strong>Telefon:</strong> {p.userPhone}</p>
                                     <p><strong>Price:</strong> {p.price || "Not set"}</p>
                                     <p><strong>Gender:</strong> {p.gender || "Not specified"}</p>
-                                    <p><strong>Subcategory:</strong> {subcategoryName}</p>
+                                    <p><strong>Size:</strong> {sizeInfo.join('; ') || "Not specified"}</p>
+                                    <p><strong>Subcategory:</strong> {p.subcategory?.name}</p>
                                     <p><strong>Created:</strong> {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "Unknown"}</p>
                                 </div>
 
@@ -108,8 +108,8 @@ console.log(allproducts);
                                     {p.colorAndSizes?.map((cs: any, idx: number) => (
                                         <div key={idx} className="space-y-1">
                                             <p><strong>Color:</strong> {cs.color}</p>
-                                            <p><strong>Size:</strong> {cs.size}</p>
-                                            {cs.imageUrls?.length > 0 && (
+                                            <p><strong>Size:</strong> {cs.sizes?.join(', ') || "No sizes"}</p>
+                                            {cs.imageUrls?.length > 0 ? (
                                                 <div className="flex flex-wrap gap-2 mt-2">
                                                     {cs.imageUrls.map((url: string, imgIdx: number) => (
                                                         <img
@@ -121,6 +121,8 @@ console.log(allproducts);
                                                         />
                                                     ))}
                                                 </div>
+                                            ) : (
+                                                <p className="text-gray-500 text-sm">No images uploaded</p>
                                             )}
                                         </div>
                                     ))}
