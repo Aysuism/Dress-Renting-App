@@ -474,7 +474,6 @@ const AddCloth: React.FC = () => {
     }
   };
 
-  // ------------------- RENDER -------------------
   return (
     <div className="py-10">
       <p className="mb-10 text-[#4A5565] text-[14px] flex items-center">
@@ -573,7 +572,7 @@ const AddCloth: React.FC = () => {
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Kateqoriya</label>
             <SelectButton
-              selected={formData.subcategory.category.id} // Ensure it's a string
+              selected={formData.subcategory.category.id}
               setSelected={handleCategorySelect}
               options={categorySelectOptions}
               default="Kateqoriya"
@@ -584,7 +583,7 @@ const AddCloth: React.FC = () => {
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Alt Kateqoriya</label>
             <SelectButton
-              selected={formData.subcategory.id} // Ensure it's a string
+              selected={formData.subcategory.id}
               setSelected={handleSubcategorySelect}
               options={subcategorySelectOptions}
               default="Alt Kateqoriya"

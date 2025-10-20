@@ -1,11 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { useWishlist } from "react-use-wishlist";
 import slugify from "slugify";
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import listIcon from "../assets/img/product-details-icon.webp";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import { useGetFavoritesQuery, useAddFavoriteMutation, useRemoveFavoriteMutation } from "../tools/wishlist";
 import type { Product } from "../tools/homeFilter";
 
 interface CardProps {
@@ -13,32 +13,31 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ clothes }) => {
-  const { addWishlistItem, removeWishlistItem, inWishlist } = useWishlist();
-  const mainColor = clothes.colorAndSizes.map(item => item.color);
+  const { data: favorites = [] } = useGetFavoritesQuery();
+  const [addFavorite] = useAddFavoriteMutation();
+  const [removeFavorite] = useRemoveFavoriteMutation();
+
   const mainSizes = clothes.colorAndSizes.flatMap(item => item.sizes).join(", ");
   const mainColorImage = clothes.colorAndSizes[0]?.imageUrls[0];
 
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
 
-
   const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategory.id)?.name;
 
-  const wishlistItem = {
-    id: clothes.productCode,
-    price: clothes.price,
-    image: mainColorImage,
-    category: clothes.subcategory.name,
-    colors: mainColor,
-    size: mainSizes,
-  };
+  const isFavorite = favorites.some((fav: any) => fav.productCode === clothes.productCode);
 
-  const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const toggleWishlist = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (inWishlist(clothes.productCode)) {
-      removeWishlistItem(clothes.productCode);
-    } else {
-      addWishlistItem(wishlistItem);
+
+    try {
+      if (isFavorite) {
+        await removeFavorite(clothes.productCode).unwrap();
+      } else {
+        await addFavorite({ productCode: clothes.productCode }).unwrap();
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
     }
   };
 
@@ -53,9 +52,9 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
         />
 
         <button className={`absolute top-2 right-2 w-[43px] h-[43px] text-xl cursor-pointer bg-white rounded-full
-        ${inWishlist(clothes.productCode) ? "text-red-500" : "text-gray-300"}`}
+        ${isFavorite ? "text-red-500" : "text-gray-300"}`}
           onClick={toggleWishlist}>
-          {inWishlist(clothes.productCode)
+          {isFavorite
             ? <FavoriteIcon className="text-black" />
             : <FavoriteBorderOutlinedIcon className="text-black" />}
         </button>
@@ -101,7 +100,6 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
             ))}
           </p>
         </div>
-
 
         {/* Note */}
         <div className="grid grid-cols-[16px_1fr] items-start gap-3">
