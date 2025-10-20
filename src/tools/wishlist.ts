@@ -27,10 +27,11 @@ export const favoritesApi = createApi({
       query: (body) => ({
         url: "",
         method: "POST",
-        body,
+        params: { productCode: body.productCode },
       }),
       invalidatesTags: ["Favorites"],
     }),
+
 
     removeFavorite: build.mutation<void, string>({
       query: (productCode) => ({
@@ -41,7 +42,7 @@ export const favoritesApi = createApi({
       invalidatesTags: ["Favorites"],
     }),
 
- 
+
   }),
 });
 
