@@ -23,7 +23,7 @@ interface Category {
 interface Subcategory {
   id: string;
   name: string;
-  category: {  // Change from category.id to category object
+  category: {
     id: string;
     name: string;
   };
@@ -49,8 +49,8 @@ interface FormData {
     name: string;
     category: {
       id: string;
-      name: string
-    }
+      name: string;
+    };
   };
   price: string;
   description: string;
@@ -138,8 +138,8 @@ const AddCloth: React.FC = () => {
       name: "",
       category: {
         id: "",
-        name: ""
-      }
+        name: "",
+      },
     },
     price: "",
     description: "",
@@ -188,51 +188,60 @@ const AddCloth: React.FC = () => {
     })),
   ];
 
-
   // ------------------- HANDLERS -------------------
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     const cleanValue = value.replace(/[^a-zA-ZƏÖÜŞÇĞİəöüşıçğİ\s]/g, "");
-
     setFormData((prev) => ({ ...prev, [name]: cleanValue }));
   };
 
   const handleGenderSelect = (value: string) => {
-    setFormData(prev => ({ ...prev, gender: value }));
+    setFormData((prev) => ({ ...prev, gender: value }));
   };
 
   const handleCategorySelect = (value: string) => {
-
     const selectedCategory = categories.find((c: Category) => c.id === value);
-
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       subcategory: {
         id: "",
         name: "",
-        category: selectedCategory ? {
-          id: selectedCategory.id,
-          name: selectedCategory.name
-        } : { id: "", name: "" }
+        category: selectedCategory
+          ? { id: selectedCategory.id, name: selectedCategory.name }
+          : { id: "", name: "" },
       },
     }));
   };
 
   const handleSubcategorySelect = (value: string) => {
-
     const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === value);
 
-    setFormData(prev => ({
+    if (!selectedSubcategory) {
+      setFormData((prev) => ({
+        ...prev,
+        subcategory: {
+          id: "",
+          name: "",
+          category: { id: "", name: "" },
+        },
+      }));
+      console.log("Subkateqoriya seçilmədi, sıfırlanır.");
+      return;
+    }
+
+    const parentCategory = categories.find((c: Category) => c.id === selectedSubcategory.category.id);
+
+    setFormData((prev) => ({
       ...prev,
-      subcategory: selectedSubcategory ? {
+      subcategory: {
         id: selectedSubcategory.id,
         name: selectedSubcategory.name,
-        category: {
-          id: selectedSubcategory.category.id,
-          name: categories.find((c: Category) => c.id === selectedSubcategory.category.id)?.name || ""
-        }
-      } : { id: "", name: "", category: { id: "", name: "" } }
+        category: parentCategory
+          ? { id: parentCategory.id, name: parentCategory.name }
+          : { id: "", name: "" },
+      },
     }));
+    console.log("Seçilmiş subkateqoriya:", selectedSubcategory);
   };
 
   const handleColorSelect = (colorValue: string) => {
@@ -268,7 +277,7 @@ const AddCloth: React.FC = () => {
     if (!files) return;
     const fileArray = Array.from(files);
 
-    const previewPromises = fileArray.map(file => {
+    const previewPromises = fileArray.map((file) => {
       return new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target?.result as string);
@@ -276,15 +285,13 @@ const AddCloth: React.FC = () => {
       });
     });
 
-    Promise.all(previewPromises).then(previews => {
+    Promise.all(previewPromises).then((previews) => {
       setFormData((prev) => ({
         ...prev,
         colorAndSizes: prev.colorAndSizes.map((cs) =>
-          cs.color === colorValue ? {
-            ...cs,
-            imageUrls: fileArray,
-            imagePreviews: previews
-          } : cs
+          cs.color === colorValue
+            ? { ...cs, imageUrls: fileArray, imagePreviews: previews }
+            : cs
         ),
       }));
     });
@@ -302,7 +309,7 @@ const AddCloth: React.FC = () => {
           return {
             ...cs,
             imageUrls: newImageUrls,
-            imagePreviews: newImagePreviews
+            imagePreviews: newImagePreviews,
           };
         }
         return cs;
@@ -313,7 +320,6 @@ const AddCloth: React.FC = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // Basic text fields
     if (!formData.userName.trim()) newErrors.userName = "Ad daxil edin";
     if (!formData.userSurname.trim()) newErrors.userSurname = "Soyad daxil edin";
 
@@ -324,24 +330,21 @@ const AddCloth: React.FC = () => {
     if (!formData.userPhone.trim() || formData.userPhone.length !== 9)
       newErrors.userPhone = "Telefon nömrəsi düzgün daxil edilməyib";
 
-    // Selects
     if (!formData.gender) newErrors.gender = "Cins seçin";
     if (!formData.subcategory.category.id) newErrors.category = "Kateqoriya seçin";
-    if (!formData.subcategory) newErrors.subcategory = "Alt kateqoriya seçin";
+    if (!formData.subcategory.id) newErrors.subcategory = "Alt kateqoriya seçin";
     if (!formData.offerType) newErrors.offerType = "İstifadə forması seçin";
     if (!formData.condition) newErrors.condition = "Vəziyyət seçin";
 
-    // Color & Size validations
     if (formData.colorAndSizes.length === 0) {
       newErrors.colorAndSizes = "Ən azı bir rəng seçin";
     } else {
       formData.colorAndSizes.forEach((cs, index) => {
-        // Sizes
+       
         if (!cs.sizes || cs.sizes.length === 0) {
           newErrors[`colorAndSizes[${index}].sizes`] = `${cs.colorName || cs.color} rəngi üçün ölçü seçin`;
         }
 
-        // Images
         const imageCount = cs.imageUrls?.length || 0;
         if (imageCount < 3) {
           newErrors[`colorAndSizes[${index}].images`] = `${cs.colorName || cs.color} rəngi üçün ən azı 3 şəkil yükləyin`;
@@ -373,12 +376,10 @@ const AddCloth: React.FC = () => {
       Swal.fire({
         icon: "error",
         title: "Xəta!",
-        text: "Telefon nömrəsi düzgün formatda deyil. İlk iki rəqəm 50,51,55,70,99 olmalıdır.",
+        text: "Telefon nömrəsi düzgün formatda deyil. İlk iki rəqəm 50,51,55,70,77,99 olmalıdır.",
       });
       return;
     }
-
-    const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === formData.subcategory.id);
 
     const payload = {
       userName: formData.userName,
@@ -386,37 +387,25 @@ const AddCloth: React.FC = () => {
       userEmail: formData.userEmail,
       userPhone: `+994${formData.userPhone}`,
       gender: formData.gender,
-      subcategory: selectedSubcategory ? {
-        id: selectedSubcategory.id,
-        name: selectedSubcategory.name,
-        category: {
-          id: selectedSubcategory.category.id,
-          name: selectedSubcategory.category.name
-        }
-      } : null,
+      subcategoryId: formData.subcategory.id, 
+      categoryId: formData.subcategory.category.id,
       offerType: formData.offerType,
       condition: formData.condition,
-      price: Number(formData.price), // Force to number
+      price: Number(formData.price),
       description: formData.description,
-      productOffers: [
-        {
-          offerType: formData.offerType,
-          price: Number(formData.price), // Force to number
-          condition: formData.condition,
-          rentDuration: formData.offerType === "RENT" ? 1 : undefined,
-        },
-      ],
-      colorAndSizes: formData.colorAndSizes.map(cs => ({
+      colorAndSizes: formData.colorAndSizes.map((cs) => ({
         color: cs.color,
         sizes: cs.sizes,
-        imageUrls: []
+        imageUrls: cs.imageUrls || [],
       })),
     };
+
+    console.log("Göndərilən payload:", JSON.stringify(payload, null, 2));
 
     const formPayload = new FormData();
     formPayload.append("product", new Blob([JSON.stringify(payload)], { type: "application/json" }));
 
-    formData.colorAndSizes.forEach(cs => {
+    formData.colorAndSizes.forEach((cs) => {
       if (cs.imageUrls && cs.imageUrls.length > 0) {
         const colorKey = cs.color;
         const sizeKey = cs.sizes.join("_");
@@ -430,6 +419,8 @@ const AddCloth: React.FC = () => {
 
     try {
       const response = await addProducts(formPayload).unwrap();
+      console.log("Backend cavabı:", response);
+
       const productCode = response.productCode || response.id || response.code;
 
       Swal.fire({
@@ -452,10 +443,7 @@ const AddCloth: React.FC = () => {
         subcategory: {
           id: "",
           name: "",
-          category: {
-            id: "",
-            name: ""
-          }
+          category: { id: "", name: "" },
         },
         price: "",
         description: "",
@@ -477,14 +465,16 @@ const AddCloth: React.FC = () => {
   return (
     <div className="py-10">
       <p className="mb-10 text-[#4A5565] text-[14px] flex items-center">
-        <Link to="/" className="hover:text-black">Əsas</Link>
+        <Link to="/" className="hover:text-black">
+          Əsas
+        </Link>
         <ChevronLeftIcon className="translate-y-[1px]" />
         Məhsul Əlavə et
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-10" encType="multipart/form-data">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Contact Info */}
+        
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Ad</label>
             <input
@@ -495,9 +485,7 @@ const AddCloth: React.FC = () => {
               onChange={handleChange}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
             />
-            {errors.userName && (
-              <p className="text-red-500 text-sm mt-1">{errors.userName}</p>
-            )}
+            {errors.userName && <p className="text-red-500 text-sm mt-1">{errors.userName}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -529,9 +517,7 @@ const AddCloth: React.FC = () => {
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
             />
-            {errors.userEmail && (
-              <p className="text-red-500 text-sm mt-1">{errors.userEmail}</p>
-            )}
+            {errors.userEmail && <p className="text-red-500 text-sm mt-1">{errors.userEmail}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -552,12 +538,9 @@ const AddCloth: React.FC = () => {
                 placeholder="xx xxx xx xx"
               />
             </div>
-            {errors.userPhone && (
-              <p className="text-red-500 text-sm mt-1">{errors.userPhone}</p>
-            )}
+            {errors.userPhone && <p className="text-red-500 text-sm mt-1">{errors.userPhone}</p>}
           </div>
 
-          {/* Gender, Category & Subcategory */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Cins</label>
             <SelectButton
@@ -591,45 +574,35 @@ const AddCloth: React.FC = () => {
             {errors.subcategory && <p className="text-red-500 text-sm mt-1">{errors.subcategory}</p>}
           </div>
 
-          {/* Offer Type & Condition */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">İstifadə forması</label>
             <SelectButton
               selected={formData.offerType}
-              setSelected={(value) => setFormData(prev => ({ ...prev, offerType: value }))}
+              setSelected={(value) => setFormData((prev) => ({ ...prev, offerType: value }))}
               options={offerTypeOptions}
               default="İstifadə forması"
             />
-            {errors.offerType && (
-              <p className="text-red-500 text-sm mt-1">{errors.offerType}</p>
-            )}
+            {errors.offerType && <p className="text-red-500 text-sm mt-1">{errors.offerType}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Vəziyyət</label>
             <SelectButton
               selected={formData.condition}
-              setSelected={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+              setSelected={(value) => setFormData((prev) => ({ ...prev, condition: value }))}
               options={conditionOptions}
               default="Vəziyyət"
             />
-            {errors.condition && (
-              <p className="text-red-500 text-sm mt-1">{errors.condition}</p>
-            )}
+            {errors.condition && <p className="text-red-500 text-sm mt-1">{errors.condition}</p>}
           </div>
 
-          {/* Color Selection */}
           <div className="col-span-1 sm:col-span-2">
             <h3 className="text-lg font-medium mb-4">Rəng Seçimi</h3>
             <div className="grid grid-cols-6 gap-4 mb-2 bg-white border border-[#D4D4D4] rounded-lg p-5">
               {colorOptions.map((color) => (
-                <div
-                  key={color.id}
-                  className="relative cursor-pointer"
-                  onClick={() => handleColorSelect(color.value)}
-                >
+                <div key={color.id} className="relative cursor-pointer" onClick={() => handleColorSelect(color.value)}>
                   <div className={`w-[32px] h-[32px] rounded-lg ${getColorClass(color.value)}`} />
-                  {formData.colorAndSizes.some(cs => cs.color === color.value) && (
+                  {formData.colorAndSizes.some((cs) => cs.color === color.value) && (
                     <div className="w-[32px] h-[32px] absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
                       <CheckIcon className="text-white w-5 h-5" />
                     </div>
@@ -637,12 +610,9 @@ const AddCloth: React.FC = () => {
                 </div>
               ))}
             </div>
-            {errors.colorAndSizes && (
-              <p className="text-red-500 text-sm mb-4">{errors.colorAndSizes}</p>
-            )}
+            {errors.colorAndSizes && <p className="text-red-500 text-sm mb-4">{errors.colorAndSizes}</p>}
           </div>
 
-          {/* Color Variants */}
           {formData.colorAndSizes.map((cs, index) => (
             <div key={cs.color} className="col-span-1 sm:col-span-2 relative mb-6">
               <div className="flex items-center gap-3 mb-4">
@@ -650,7 +620,6 @@ const AddCloth: React.FC = () => {
                 <div className={`w-8 h-8 rounded-lg ${getColorClass(cs.color)} border border-gray-300`} />
               </div>
 
-              {/* Sizes */}
               <div className="w-full grid grid-cols-1 gap-3 mb-4">
                 <label className="text-md font-medium">Ölçülər</label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -659,10 +628,9 @@ const AddCloth: React.FC = () => {
                       key={size.id}
                       type="button"
                       onClick={() => handleSizeSelect(cs.color, size.value)}
-                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${cs.sizes.includes(size.value)
-                        ? 'bg-black text-white'
-                        : 'bg-[#E5E7EB] text-gray-600'
-                        }`}
+                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${
+                        cs.sizes.includes(size.value) ? "bg-black text-white" : "bg-[#E5E7EB] text-gray-600"
+                      }`}
                     >
                       {size.name}
                     </button>
@@ -673,14 +641,10 @@ const AddCloth: React.FC = () => {
                 )}
               </div>
 
-              {/* Images */}
               <div>
                 <label className="text-md font-medium mb-1">Şəkil yüklə</label>
-                <p className="text-gray-500 mb-2">
-                  {cs.imageUrls.length}/10 şəkil (minimum 3)
-                </p>
+                <p className="text-gray-500 mb-2">{cs.imageUrls.length}/10 şəkil (minimum 3)</p>
 
-                {/* Image Upload Area */}
                 <label className="flex flex-col gap-2 items-center justify-center h-[100px] border-2 border-dashed border-black rounded-[16px] cursor-pointer text-center text-gray-500 hover:bg-gray-100">
                   <span className="px-5">Şəkil yükləmək üçün seçin və ya buraya sürükləyin</span>
                   <input
@@ -692,7 +656,6 @@ const AddCloth: React.FC = () => {
                   />
                 </label>
 
-                {/* Image Previews */}
                 {cs.imagePreviews && cs.imagePreviews.length > 0 && (
                   <div className="mt-4">
                     <p className="text-sm font-medium mb-2">Yüklənmiş şəkillər:</p>
@@ -724,7 +687,6 @@ const AddCloth: React.FC = () => {
             </div>
           ))}
 
-          {/* Price & Description */}
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
@@ -735,7 +697,6 @@ const AddCloth: React.FC = () => {
               value={formData.price}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow numbers and decimal point
                 if (/^\d*\.?\d*$/.test(value)) {
                   setFormData((prev) => ({ ...prev, price: value }));
                 }
@@ -743,9 +704,7 @@ const AddCloth: React.FC = () => {
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
               placeholder="0.00"
             />
-            {errors.price && (
-              <p className="text-red-500 text-sm mt-1">{errors.price}</p>
-            )}
+            {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
           </div>
 
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
@@ -755,13 +714,11 @@ const AddCloth: React.FC = () => {
               value={formData.description}
               onChange={(e) => {
                 const { name, value } = e.target;
-                setFormData(prev => ({ ...prev, [name]: value }));
+                setFormData((prev) => ({ ...prev, [name]: value }));
               }}
               className="px-4 py-3 bg-white border rounded-lg outline-none border-[#D4D4D4] h-[100px]"
             />
-            {errors.description && (
-              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
-            )}
+            {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
           </div>
         </div>
 
