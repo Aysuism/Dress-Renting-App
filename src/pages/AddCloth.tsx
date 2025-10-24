@@ -23,7 +23,7 @@ interface Category {
 interface Subcategory {
   id: string;
   name: string;
-  category: {  // Change from category.id to category object
+  category: {
     id: string;
     name: string;
   };
@@ -202,38 +202,49 @@ const AddCloth: React.FC = () => {
   };
 
   const handleCategorySelect = (value: string) => {
-
     const selectedCategory = categories.find((c: Category) => c.id === value);
-
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       subcategory: {
         id: "",
         name: "",
-        category: selectedCategory ? {
-          id: selectedCategory.id,
-          name: selectedCategory.name
-        } : { id: "", name: "" }
+        category: selectedCategory
+          ? { id: selectedCategory.id, name: selectedCategory.name }
+          : { id: "", name: "" },
       },
     }));
   };
 
   const handleSubcategorySelect = (value: string) => {
-
     const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === value);
 
-    setFormData(prev => ({
+    if (!selectedSubcategory) {
+      setFormData((prev) => ({
+        ...prev,
+        subcategory: {
+          id: "",
+          name: "",
+          category: { id: "", name: "" },
+        },
+      }));
+      console.log("Subkateqoriya seçilmədi, sıfırlanır.");
+      return;
+    }
+    const parentCategory = categories.find((c: Category) => c.id === selectedSubcategory.category.id);
+
+    setFormData((prev) => ({
       ...prev,
-      subcategory: selectedSubcategory ? {
+      subcategory: {
         id: selectedSubcategory.id,
         name: selectedSubcategory.name,
-        category: {
-          id: selectedSubcategory.category.id,
-          name: categories.find((c: Category) => c.id === selectedSubcategory.category.id)?.name || ""
-        }
-      } : { id: "", name: "", category: { id: "", name: "" } }
+        category: parentCategory
+          ? { id: parentCategory.id, name: parentCategory.name }
+          : { id: "", name: "" },
+      },
     }));
+    console.log("Seçilmiş subkateqoriya:", selectedSubcategory);
   };
+
 
   const handleColorSelect = (colorValue: string) => {
     setFormData((prev) => {
@@ -313,7 +324,6 @@ const AddCloth: React.FC = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // Basic text fields
     if (!formData.userName.trim()) newErrors.userName = "Ad daxil edin";
     if (!formData.userSurname.trim()) newErrors.userSurname = "Soyad daxil edin";
 
@@ -324,24 +334,20 @@ const AddCloth: React.FC = () => {
     if (!formData.userPhone.trim() || formData.userPhone.length !== 9)
       newErrors.userPhone = "Telefon nömrəsi düzgün daxil edilməyib";
 
-    // Selects
     if (!formData.gender) newErrors.gender = "Cins seçin";
     if (!formData.subcategory.category.id) newErrors.category = "Kateqoriya seçin";
-    if (!formData.subcategory) newErrors.subcategory = "Alt kateqoriya seçin";
+    if (!formData.subcategory.id) newErrors.subcategory = "Alt kateqoriya seçin";
     if (!formData.offerType) newErrors.offerType = "İstifadə forması seçin";
     if (!formData.condition) newErrors.condition = "Vəziyyət seçin";
 
-    // Color & Size validations
     if (formData.colorAndSizes.length === 0) {
       newErrors.colorAndSizes = "Ən azı bir rəng seçin";
     } else {
       formData.colorAndSizes.forEach((cs, index) => {
-        // Sizes
         if (!cs.sizes || cs.sizes.length === 0) {
           newErrors[`colorAndSizes[${index}].sizes`] = `${cs.colorName || cs.color} rəngi üçün ölçü seçin`;
         }
 
-        // Images
         const imageCount = cs.imageUrls?.length || 0;
         if (imageCount < 3) {
           newErrors[`colorAndSizes[${index}].images`] = `${cs.colorName || cs.color} rəngi üçün ən azı 3 şəkil yükləyin`;
@@ -378,30 +384,22 @@ const AddCloth: React.FC = () => {
       return;
     }
 
-    const selectedSubcategory = subcategories.find((sc: Subcategory) => sc.id === formData.subcategory.id);
-
     const payload = {
       userName: formData.userName,
       userSurname: formData.userSurname,
       userEmail: formData.userEmail,
       userPhone: `+994${formData.userPhone}`,
       gender: formData.gender,
-      subcategory: selectedSubcategory ? {
-        id: selectedSubcategory.id,
-        name: selectedSubcategory.name,
-        category: {
-          id: selectedSubcategory.category.id,
-          name: selectedSubcategory.category.name
-        }
-      } : null,
+      subcategoryId: formData.subcategory.id,
+      categoryId: formData.subcategory.category.id,
       offerType: formData.offerType,
       condition: formData.condition,
-      price: Number(formData.price), // Force to number
+      price: Number(formData.price),
       description: formData.description,
       productOffers: [
         {
           offerType: formData.offerType,
-          price: Number(formData.price), // Force to number
+          price: Number(formData.price),
           condition: formData.condition,
           rentDuration: formData.offerType === "RENT" ? 1 : undefined,
         },
