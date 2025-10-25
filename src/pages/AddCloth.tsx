@@ -225,10 +225,8 @@ const AddCloth: React.FC = () => {
           category: { id: "", name: "" },
         },
       }));
-      console.log("Subkateqoriya seçilmədi, sıfırlanır.");
       return;
     }
-
     const parentCategory = categories.find((c: Category) => c.id === selectedSubcategory.category.id);
 
     setFormData((prev) => ({
@@ -340,7 +338,6 @@ const AddCloth: React.FC = () => {
       newErrors.colorAndSizes = "Ən azı bir rəng seçin";
     } else {
       formData.colorAndSizes.forEach((cs, index) => {
-       
         if (!cs.sizes || cs.sizes.length === 0) {
           newErrors[`colorAndSizes[${index}].sizes`] = `${cs.colorName || cs.color} rəngi üçün ölçü seçin`;
         }
@@ -391,16 +388,21 @@ const AddCloth: React.FC = () => {
       categoryId: formData.subcategory.category.id,
       offerType: formData.offerType,
       condition: formData.condition,
-      price: Number(formData.price),
       description: formData.description,
-      colorAndSizes: formData.colorAndSizes.map((cs) => ({
+      productOffers: [
+        {
+          offerType: formData.offerType,
+          price: Number(formData.price),
+          condition: formData.condition,
+          rentDuration: formData.offerType === "RENT" ? 1 : undefined,
+        },
+      ],
+      colorAndSizes: formData.colorAndSizes.map(cs => ({
         color: cs.color,
         sizes: cs.sizes,
         imageUrls: cs.imageUrls || [],
       })),
     };
-
-    console.log("Göndərilən payload:", JSON.stringify(payload, null, 2));
 
     const formPayload = new FormData();
     formPayload.append("product", new Blob([JSON.stringify(payload)], { type: "application/json" }));
@@ -690,10 +692,8 @@ const AddCloth: React.FC = () => {
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
-              type="number"
+              type="text"
               name="price"
-              step="0.01"
-              min="0"
               value={formData.price}
               onChange={(e) => {
                 const value = e.target.value;
@@ -703,6 +703,7 @@ const AddCloth: React.FC = () => {
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
               placeholder="0.00"
+              inputMode="decimal"
             />
             {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
           </div>

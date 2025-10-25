@@ -58,7 +58,7 @@ const ProductDetails = () => {
 
     const availableSizes = colorAndSizes
         .filter((cs: any) => cs.color === activeColor)
-        .map((cs: any) => cs.sizes.map((item: any) => item.size));
+        .flatMap((cs: any) => cs.sizes.map((item: any) => item));
 
     const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
 
