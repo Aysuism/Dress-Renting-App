@@ -46,12 +46,12 @@ export const homeApi = createApi({
       query: ({ offerType, productCondition }) =>
         `products/get-by-Offer-Type?offerType=${offerType}&productCondition=${productCondition}`,
     }),
-    filterProducts: builder.query<Product[], { subcategoryId?: number; categoryId?: number; color?: string; size?: string; gender?: string; minPrice?: number; maxPrice?: number }>({
-      query: ({ subcategoryId, categoryId, color, size, gender, minPrice, maxPrice }) => {
+    filterProducts: builder.query<Product[], { subcategoryId?: number; categoryId?: number; color?: string; sizes?: string; gender?: string; minPrice?: number; maxPrice?: number }>({
+      query: ({ subcategoryId, categoryId, color, sizes, gender, minPrice, maxPrice }) => {
         const params = new URLSearchParams();
         if (subcategoryId) params.append('subcategoryId', subcategoryId.toString());
         if (categoryId) params.append('categoryId', categoryId.toString());
-        if (size) params.append('size', size);
+        if (sizes) params.append('sizes', sizes);
         if (gender) params.append('gender', gender);
         if (color) params.append('color', color);
         if (minPrice) params.append('minPrice', minPrice.toString());

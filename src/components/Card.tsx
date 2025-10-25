@@ -5,41 +5,46 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import listIcon from "../assets/img/product-details-icon.webp";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
-import { useGetFavoritesQuery, useAddFavoriteMutation, useRemoveFavoriteMutation } from "../tools/wishlist";
-import type { Product } from "../tools/homeFilter";
+// import { useGetFavoritesQuery, useAddFavoriteMutation, useRemoveFavoriteMutation } from "../tools/wishlist";
+import { useWishlist } from "react-use-wishlist";
 
-interface CardProps {
-  clothes: Product;
-}
+const Card = ({ clothes }: any) => {
+  // const { data: favorites = [] } = useGetFavoritesQuery();
+  // const [addFavorite] = useAddFavoriteMutation();
+  // const [removeFavorite] = useRemoveFavoriteMutation();
+  const { addWishlistItem, removeWishlistItem, inWishlist } = useWishlist();
+  const mainColor = clothes.colorAndSizes?.map((item: any) => item.color);
 
-const Card: React.FC<CardProps> = ({ clothes }) => {
-  const { data: favorites = [] } = useGetFavoritesQuery();
-  const [addFavorite] = useAddFavoriteMutation();
-  const [removeFavorite] = useRemoveFavoriteMutation();
+  const mainSizes = clothes.colorAndSizes?.map((item: any) => item.sizes.map((c:string)=>c)).join(", ");
+  const mainColorImage = clothes.colorAndSizes?.[0]?.imageUrls?.[0] || clothes.image;
 
-  const mainSizes = clothes.colorAndSizes.flatMap(item => item.sizes).join(", ");
-  const mainColorImage = clothes.colorAndSizes[0]?.imageUrls[0];
 
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
 
-  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategory.id)?.name;
+  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategory?.id)?.name;
 
-  const isFavorite = favorites.some((fav: any) => fav.productCode === clothes.productCode);
+  const productId = clothes.productCode || clothes.id;
 
-  const toggleWishlist = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const wishlistItem = {
+    id: productId,
+    price: clothes.price,
+    image: mainColorImage,
+    category: clothes.subcategory?.name || clothes.category,
+    colors: mainColor,
+    size: mainSizes,
+  };
+
+  const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    try {
-      if (isFavorite) {
-        await removeFavorite(clothes.productCode).unwrap();
-      } else {
-        await addFavorite({ productCode: clothes.productCode }).unwrap();
-      }
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
+    if (inWishlist(productId)) {
+      removeWishlistItem(productId);
+    } else {
+      addWishlistItem(wishlistItem);
     }
   };
+
 
   return (
     <Link to={`/${slugify(String(clothes.productCode), { lower: true })}`}
@@ -52,9 +57,9 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
         />
 
         <button className={`absolute top-2 right-2 w-[43px] h-[43px] text-xl cursor-pointer bg-white rounded-full
-        ${isFavorite ? "text-red-500" : "text-gray-300"}`}
+              ${inWishlist(clothes.productCode) ? "text-red-500" : "text-gray-300"}`}
           onClick={toggleWishlist}>
-          {isFavorite
+          {inWishlist(productId)
             ? <FavoriteIcon className="text-black" />
             : <FavoriteBorderOutlinedIcon className="text-black" />}
         </button>
@@ -76,7 +81,7 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
           <p>
             İstifadəsi:
             <span className="text-gray-500 ms-1">
-              {clothes.offers[0].offerType === 'SALE' ? 'Satış' : 'İcarə'}
+              {clothes.offers?.offerType === 'SALE' ? 'Satış' : 'İcarə'}
             </span>
           </p>
         </div>
@@ -91,7 +96,7 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
 
           <p className="flex items-center justify-end gap-2">
             Rəng:
-            {clothes.colorAndSizes.map((item: any, idx: number) => (
+            {clothes.colorAndSizes?.map((item: any, idx: number) => (
               <span
                 key={idx}
                 className="w-5 h-5 rounded-full border border-gray-300"
@@ -108,7 +113,7 @@ const Card: React.FC<CardProps> = ({ clothes }) => {
             alt="details-icon"
             className="w-[16px] object-contain mt-1"
           />
-          <p>{clothes.description.slice(0, 40)}...</p>
+          <p>{clothes.description?.slice(0, 40)}...</p>
         </div>
       </div>
     </Link>

@@ -1,19 +1,24 @@
-import { useGetFavoritesQuery } from "../tools/wishlist";
-import { useGetProductsQuery } from "../tools/product";
-import Card from "../components/Card"; // Import the same Card component
+// import { useGetFavoritesQuery } from "../tools/wishlist";
+// import { useGetProductsQuery } from "../tools/product";
+import { useWishlist } from "react-use-wishlist";
+import Card from "../components/Card";
 import { Link } from "react-router-dom";
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
 const Wishlist = () => {
-  const { data: favorites = [], isLoading: favoritesLoading } = useGetFavoritesQuery();
-  const { data: allProducts = [], isLoading: productsLoading } = useGetProductsQuery([]);
+  // const { data: favorites = [], isLoading: favoritesLoading } = useGetFavoritesQuery();
+  // const { data: allProducts = [], isLoading: productsLoading } = useGetProductsQuery([]);
+  const { items } = useWishlist();
 
-  // Get favorite products by matching product codes
-  const favoriteProducts = allProducts.filter((product: any) =>
-    favorites.some((fav: any) => fav.productCode === product.productCode)
+  // const favoriteProducts = allProducts.filter((product: any) =>
+  //   favorites.some((fav: any) => fav.productCode === product.productCode)
+  // );
+
+  const favItems = items.filter(
+    (item, index, self) => index === self.findIndex((t) => t.id === item.id)
   );
 
-  const isLoading = favoritesLoading || productsLoading;
+  // const isLoading = favoritesLoading || productsLoading;
 
   return (
     <div className="min-h-screen flex flex-col py-10">
@@ -23,11 +28,8 @@ const Wishlist = () => {
         Sevimlilər
       </p>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <div className="text-lg">Loading...</div>
-        </div>
-      ) : favoriteProducts.length === 0 ? (
+      {favItems.length === 0 ? (
+        //  favoriteProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10">
           <img
             src="https://www.emp.co.uk/on/demandware.static/Sites-GLB-Site/-/default/dwd1d465d0/images/logos/empty-cart.gif"
@@ -40,8 +42,11 @@ const Wishlist = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {favoriteProducts.map((product: any) => (
+          {/* {favoriteProducts.map((product: any) => (
             <Card key={product.productCode} clothes={product} />
+          ))} */}
+          {favItems.map((item) => (
+            <Card key={item.id} clothes={item} />
           ))}
         </div>
       )}

@@ -4,7 +4,7 @@ import SelectButton from "../components/SelectButton";
 import { colorOptions } from "./AddCloth";
 import { useGetCategoriesQuery } from "../tools/categories";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
-import { useFilterProductsQuery, useGetByOfferTypeQuery } from "../tools/homeFilter";
+import { useFilterProductsQuery } from "../tools/homeFilter";
 import type { Option } from "../tools/types";
 import { useGetProductsQuery } from "../tools/product";
 
@@ -35,10 +35,10 @@ const Home = () => {
   const { data: products = [] } = useGetProductsQuery([]);
   const { data: categories = [] } = useGetCategoriesQuery([]);
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
-  const { data: offerProducts = [] } = useGetByOfferTypeQuery({
-    offerType: "SALE",
-    productCondition: "SECOND_HAND",
-  });
+  // const { data: offerProducts = [] } = useGetByOfferTypeQuery({
+  //   offerType: "SALE",
+  //   productCondition: "SECOND_HAND",
+  // });
 
   const categoryOptions: Option[] = categories.map((cat: any) => ({
     id: String(cat.id),
@@ -72,7 +72,7 @@ const Home = () => {
       categoryId: selectedCategory ? Number(selectedCategory) : undefined,
       subcategoryId: selectedSubcategory ? Number(selectedSubcategory) : undefined,
       color: selectedColor,
-      size: selectedSize,
+      sizes: selectedSize,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
     },

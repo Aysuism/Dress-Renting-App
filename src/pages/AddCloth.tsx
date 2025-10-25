@@ -227,7 +227,6 @@ const AddCloth: React.FC = () => {
           category: { id: "", name: "" },
         },
       }));
-      console.log("Subkateqoriya seçilmədi, sıfırlanır.");
       return;
     }
     const parentCategory = categories.find((c: Category) => c.id === selectedSubcategory.category.id);
@@ -244,7 +243,6 @@ const AddCloth: React.FC = () => {
     }));
     console.log("Seçilmiş subkateqoriya:", selectedSubcategory);
   };
-
 
   const handleColorSelect = (colorValue: string) => {
     setFormData((prev) => {
@@ -394,7 +392,6 @@ const AddCloth: React.FC = () => {
       categoryId: formData.subcategory.category.id,
       offerType: formData.offerType,
       condition: formData.condition,
-      price: Number(formData.price),
       description: formData.description,
       productOffers: [
         {
@@ -726,20 +723,18 @@ const AddCloth: React.FC = () => {
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
-              type="number"
+              type="text"
               name="price"
-              step="0.01"
-              min="0"
               value={formData.price}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow numbers and decimal point
                 if (/^\d*\.?\d*$/.test(value)) {
                   setFormData((prev) => ({ ...prev, price: value }));
                 }
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
               placeholder="0.00"
+              inputMode="decimal"
             />
             {errors.price && (
               <p className="text-red-500 text-sm mt-1">{errors.price}</p>
