@@ -89,7 +89,7 @@ const offerTypeOptions: Option[] = [
   { id: "2", name: "Satış", value: "SALE" },
 ];
 
-const conditionOptions: Option[] = [
+export const conditionOptions: Option[] = [
   { id: "1", name: "Birinci Əl", value: "FIRST_HAND" },
   { id: "2", name: "İkinci Əl", value: "SECOND_HAND" },
 ];
@@ -288,7 +288,11 @@ const AddCloth: React.FC = () => {
         ...prev,
         colorAndSizes: prev.colorAndSizes.map((cs) =>
           cs.color === colorValue
-            ? { ...cs, imageUrls: fileArray, imagePreviews: previews }
+            ? {
+              ...cs,
+              imageUrls: [...(cs.imageUrls || []), ...fileArray].slice(0, 10),
+              imagePreviews: [...(cs.imagePreviews || []), ...previews].slice(0, 10),
+            }
             : cs
         ),
       }));
@@ -384,7 +388,7 @@ const AddCloth: React.FC = () => {
       userEmail: formData.userEmail,
       userPhone: `+994${formData.userPhone}`,
       gender: formData.gender,
-      subcategoryId: formData.subcategory.id, 
+      subcategoryId: formData.subcategory.id,
       categoryId: formData.subcategory.category.id,
       offerType: formData.offerType,
       condition: formData.condition,
@@ -476,7 +480,7 @@ const AddCloth: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-10" encType="multipart/form-data">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Ad</label>
             <input
@@ -630,9 +634,8 @@ const AddCloth: React.FC = () => {
                       key={size.id}
                       type="button"
                       onClick={() => handleSizeSelect(cs.color, size.value)}
-                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${
-                        cs.sizes.includes(size.value) ? "bg-black text-white" : "bg-[#E5E7EB] text-gray-600"
-                      }`}
+                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${cs.sizes.includes(size.value) ? "bg-black text-white" : "bg-[#E5E7EB] text-gray-600"
+                        }`}
                     >
                       {size.name}
                     </button>
@@ -643,6 +646,7 @@ const AddCloth: React.FC = () => {
                 )}
               </div>
 
+              {/* Image */}
               <div>
                 <label className="text-md font-medium mb-1">Şəkil yüklə</label>
                 <p className="text-gray-500 mb-2">{cs.imageUrls.length}/10 şəkil (minimum 3)</p>
@@ -689,6 +693,7 @@ const AddCloth: React.FC = () => {
             </div>
           ))}
 
+          {/* Price */}
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
@@ -702,8 +707,7 @@ const AddCloth: React.FC = () => {
                 }
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
-              placeholder="0.00"
-              inputMode="decimal"
+              placeholder="0"
             />
             {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
           </div>
@@ -727,7 +731,7 @@ const AddCloth: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full max-w-[600px] bg-black text-white px-6 py-3 rounded-lg disabled:opacity-50"
+            className="w-full max-w-[600px] bg-black text-white px-6 py-3 rounded-lg disabled:opacity-50 cursor-pointer"
           >
             {isLoading ? "Göndərilir..." : "Məhsul Əlavə Et"}
           </button>

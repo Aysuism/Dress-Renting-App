@@ -32,6 +32,8 @@ const Card = ({ clothes }: any) => {
     category: clothes.subcategory?.name || clothes.category,
     colors: mainColor,
     size: mainSizes,
+    description:clothes.description,
+    offerType:clothes.offers?.[0].offerType,
   };
 
   const toggleWishlist = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -81,7 +83,7 @@ const Card = ({ clothes }: any) => {
           <p>
             İstifadəsi:
             <span className="text-gray-500 ms-1">
-              {clothes.offers?.offerType === 'SALE' ? 'Satış' : 'İcarə'}
+              {clothes.offers?.[0].offerType === 'SALE' ? 'Satış' : 'İcarə'}
             </span>
           </p>
         </div>

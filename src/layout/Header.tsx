@@ -188,7 +188,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
       <div className="container mx-auto flex justify-between items-center gap-6">
         {/* Logo */}
         <Link to="/">
-          <img src={logo} alt="we-share-logo" className="w-full h-[50px]" />
+          <img src={logo} alt="we-share-logo" className="w-full h-[50px] object-contain" />
         </Link>
 
         {/* Desktop search */}
@@ -306,8 +306,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
         {/* Logo */}
         <Link to="/" className="flex justify-center pb-4" onClick={() => setSidebarOpen(false)}>
-          <img src={logo} alt="second-hand-logo" className="h-[60px] object-contain" />
+          <div className="w-1/2 max-w-[200px] aspect-[200/60] relative">
+            <img src={logo} alt="second-hand-logo" className="absolute inset-0 w-full h-full object-contain" />
+          </div>
         </Link>
+
 
         {/* Mobile search */}
         <div className="relative">

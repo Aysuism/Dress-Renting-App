@@ -61,6 +61,7 @@ const ProductDetails = () => {
         .flatMap((cs: any) => cs.sizes.map((item: any) => item));
 
     const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
+    console.log(product);
 
     return (
         <div className="py-10 ">
@@ -130,6 +131,18 @@ const ProductDetails = () => {
                         <p className="font-medium mr-3">Məhsul kodu:</p>
 
                         <span className="">{product.productCode}</span>
+                    </div>
+
+                    {/* Condition */}
+                    <div className="flex items-center">
+                        <p className="font-medium mr-3">Vəziyyət:</p>
+                        <span>{product.offers[0].productCondition === "FIRST_HAND" ? "Birinci əl" : "İkinci əl"}</span>
+                    </div>
+
+                    {/* OfferType */}
+                    <div className="flex items-center">
+                        <p className="font-medium mr-3">İstifadə forması:</p>
+                        <span>{product.offers[0].offerType === "SALE" ? "Satış" : "İcarə"}</span>
                     </div>
 
                     {/* Sizes */}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Card from "../components/Card";
 import SelectButton from "../components/SelectButton";
-import { colorOptions } from "./AddCloth";
+import { colorOptions, conditionOptions } from "./AddCloth";
 import { useGetCategoriesQuery } from "../tools/categories";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { useFilterProductsQuery } from "../tools/homeFilter";
@@ -23,6 +23,7 @@ export const genderOptions: Option[] = [
   { id: "3", name: "Uşaq", value: "KID" },
 ];
 
+
 const Home = () => {
   const [selectedGender, setSelectedGender] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -39,6 +40,7 @@ const Home = () => {
   //   offerType: "SALE",
   //   productCondition: "SECOND_HAND",
   // });
+  const [selectedProductCondition, setSelectedProductCondition] = useState<string>("");
 
   const categoryOptions: Option[] = categories.map((cat: any) => ({
     id: String(cat.id),
@@ -88,7 +90,15 @@ const Home = () => {
     }
   );
 
-  const displayProducts = selectedGender || selectedCategory || selectedSubcategory || selectedColor || selectedSize || minPrice || maxPrice ? filteredProducts : products;
+  let displayProducts = selectedGender || selectedCategory || selectedSubcategory || selectedColor || selectedSize || minPrice || maxPrice
+    ? filteredProducts
+    : products;
+
+  if (selectedProductCondition) {
+    displayProducts = displayProducts.filter(
+      (item: any) => item.offers?.[0]?.productCondition === selectedProductCondition
+    );
+  }
 
   return (
     <div className="flex flex-col py-10">
@@ -134,6 +144,15 @@ const Home = () => {
           setSelected={setSelectedSize}
           default="Ölçü"
         />
+
+        {/* Product Condition */}
+        <SelectButton
+          options={conditionOptions}
+          selected={selectedProductCondition}
+          setSelected={setSelectedProductCondition}
+          default="Məhsul vəziyyəti"
+        />
+
 
         {/* Price Inputs */}
         <input

@@ -3,7 +3,7 @@ import { NavLink, Outlet } from "react-router";
 const AdminPanel = () => {
 
   return (
-    <div className="p-6">
+    <div className="sm:p-6">
       <div className="flex space-x-4 bg-gray-100 p-4 my-5 rounded shadow-sm">
         <NavLink
           to="product-management"
@@ -28,7 +28,7 @@ const AdminPanel = () => {
         <NavLink
           to="subcategory-management"
           className={({ isActive }) =>
-            `px-3 py-2 rounded-md font-medium transition-colors ${isActive ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-blue-100"
+            `px-3 py-2 rounded-md font-medium transition-colors break-words ${isActive ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-blue-100"
             }`
           }
         >
