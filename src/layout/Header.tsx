@@ -184,7 +184,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
   // ---------------- UI ----------------
   return (
-    <header className="px-6 py-4 bg-white sticky top-0 z-50">
+    <header className="p-[18px] sm:px-6 py-4 bg-white sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center gap-6">
         {/* Logo */}
         <Link to="/">

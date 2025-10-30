@@ -52,7 +52,7 @@ interface FormData {
       name: string;
     };
   };
-  price: string;
+  price: number;
   description: string;
   offerType: string;
   condition: string;
@@ -141,7 +141,7 @@ const AddCloth: React.FC = () => {
         name: "",
       },
     },
-    price: "",
+    price: 0,
     description: "",
     offerType: "",
     condition: "",
@@ -239,7 +239,6 @@ const AddCloth: React.FC = () => {
           : { id: "", name: "" },
       },
     }));
-    console.log("Seçilmiş subkateqoriya:", selectedSubcategory);
   };
 
   const handleColorSelect = (colorValue: string) => {
@@ -355,7 +354,9 @@ const AddCloth: React.FC = () => {
       });
     }
 
-    if (!formData.price.trim()) newErrors.price = "Qiymət daxil edin";
+    if (!formData.price && formData.price !== 0) {
+      errors.price = "Qiymət daxil edin";
+    }
     if (!formData.description.trim()) newErrors.description = "Qeyd bölməsini doldurun";
 
     return newErrors;
@@ -451,7 +452,7 @@ const AddCloth: React.FC = () => {
           name: "",
           category: { id: "", name: "" },
         },
-        price: "",
+        price: 0,
         description: "",
         offerType: "",
         condition: "",
@@ -609,7 +610,7 @@ const AddCloth: React.FC = () => {
                 <div key={color.id} className="relative cursor-pointer" onClick={() => handleColorSelect(color.value)}>
                   <div className={`w-[32px] h-[32px] rounded-lg ${getColorClass(color.value)}`} />
                   {formData.colorAndSizes.some((cs) => cs.color === color.value) && (
-                    <div className="w-[32px] h-[32px] absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                    <div className={`w-[32px] h-[32px] absolute inset-0 flex items-center justify-center ${getColorClass(color.value)} bg-opacity-30 rounded-lg`}>
                       <CheckIcon className="text-white w-5 h-5" />
                     </div>
                   )}
@@ -697,18 +698,21 @@ const AddCloth: React.FC = () => {
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="text-sm font-medium text-black mb-2">Qiymət</label>
             <input
-              type="text"
+              type="number"
               name="price"
               value={formData.price}
               onChange={(e) => {
                 const value = e.target.value;
-                if (/^\d*\.?\d*$/.test(value)) {
-                  setFormData((prev) => ({ ...prev, price: value }));
-                }
+                setFormData((prev: any) => ({
+                  ...prev,
+                  price: value === "" ? "" : parseFloat(value),
+                }));
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
               placeholder="0"
+              step="0.01"
             />
+
             {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
           </div>
 
