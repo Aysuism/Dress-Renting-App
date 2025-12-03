@@ -15,6 +15,7 @@ import CategoryManagement from "./pages/auth/CategoryManagement";
 import SubcategoryManagement from "./pages/auth/SubcategoryManagement";
 import ProductManagement from "./pages/auth/ProductManagement";
 import SearchResults from "./pages/SearchResults";
+import BrandManagement from "./pages/auth/BrandManagement";
 
 const Router = () => {
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,7 @@ const Router = () => {
               <Route path="product-management" element={<ProductManagement />} />
               <Route path="category-management" element={<CategoryManagement />} />
               <Route path="subcategory-management" element={<SubcategoryManagement />} />
+              <Route path="brand-management" element={<BrandManagement />} />
             </Route>
 
             <Route path="/" element={<Home />} />

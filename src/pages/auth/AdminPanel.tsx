@@ -34,6 +34,16 @@ const AdminPanel = () => {
         >
           SubCategory
         </NavLink>
+
+        <NavLink
+          to="brand-management"
+          className={({ isActive }) =>
+            `px-3 py-2 rounded-md font-medium transition-colors ${isActive ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-blue-100"
+            }`
+          }
+        >
+          Brands
+        </NavLink>
       </div>
 
       <Outlet />

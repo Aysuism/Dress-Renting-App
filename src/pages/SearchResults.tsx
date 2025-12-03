@@ -2,47 +2,50 @@
 import { useLocation } from "react-router-dom";
 import Card from "../components/Card";
 import { useGetCategoriesQuery } from "../tools/categories";
-import { useGetSubcategoriesQuery } from "../tools/subCategory";
+// import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { useFilterProductsQuery } from "../tools/homeFilter";
 import { useEffect, useMemo, useState } from "react";
 import { useGetProductsQuery } from "../tools/product";
+import { colorOptions } from "./AddCloth";
 
 const SearchResults = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  
+
   const { data: categories = [] } = useGetCategoriesQuery([]);
-  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+  // const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
   const { data: allProducts = [] } = useGetProductsQuery([]);
 
   const categoryName = searchParams.get('categoryName');
-  const subcategoryName = searchParams.get('subcategoryName');
+  // const subcategoryName = searchParams.get('subcategoryName');
   const gender = searchParams.get('gender');
+  const color = searchParams.get('color');
   const productCode = searchParams.get('productCode');
 
   const [categoryId, setCategoryId] = useState<string>("");
-  const [subcategoryId, setSubcategoryId] = useState<string>("");
+  // const [subcategoryId, setSubcategoryId] = useState<string>("");
   const [genderValue, setGenderValue] = useState<string>("");
+  const [colorValue, setColorValue] = useState<string>("");
 
   useEffect(() => {
     if (categoryName) {
-      const foundCategory = categories.find((cat: any) => 
+      const foundCategory = categories.find((cat: any) =>
         cat.name?.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
       );
       setCategoryId(foundCategory ? String(foundCategory.id) : "");
     }
 
-    if (subcategoryName) {
-      const foundSubcategory = subcategories.find((sub: any) => 
-        sub.name?.toLowerCase() === decodeURIComponent(subcategoryName).toLowerCase()
-      );
-      setSubcategoryId(foundSubcategory ? String(foundSubcategory.id) : "");
-    }
+    // if (subcategoryName) {
+    //   const foundSubcategory = subcategories.find((sub: any) =>
+    //     sub.name?.toLowerCase() === decodeURIComponent(subcategoryName).toLowerCase()
+    //   );
+    //   setSubcategoryId(foundSubcategory ? String(foundSubcategory.id) : "");
+    // }
 
     if (gender) {
       const genderMap: { [key: string]: string } = {
         "MAN": "MAN",
-        "WOMAN": "WOMAN", 
+        "WOMAN": "WOMAN",
         "KID": "KID",
         "Kişi": "MAN",
         "Qadın": "WOMAN",
@@ -50,41 +53,60 @@ const SearchResults = () => {
       };
       setGenderValue(genderMap[gender] || "");
     }
-  }, [categoryName, subcategoryName, gender, categories, subcategories]);
+
+    if (color) {
+      const decodedColor = decodeURIComponent(color);
+
+      const colorMap: { [key: string]: string } = {};
+      colorOptions.forEach(option => {
+        colorMap[option.name] = option.value;
+        colorMap[option.value] = option.value;
+      });
+
+      const finalColor = colorMap[decodedColor] || decodedColor;
+      setColorValue(finalColor);
+    }
+  }, [categoryName, gender, color, categories]);
 
   const { data: filteredProducts = [], isLoading } = useFilterProductsQuery(
     {
       gender: genderValue,
+      color: colorValue,
       categoryId: categoryId ? Number(categoryId) : undefined,
-      subcategoryId: subcategoryId ? Number(subcategoryId) : undefined,
+      // subcategoryId: subcategoryId ? Number(subcategoryId) : undefined,
     },
     {
-      skip: !genderValue && !categoryId && !subcategoryId || !!productCode,
+      skip: (!genderValue && !categoryId && !colorValue) || !!productCode,
     }
   );
 
-  // Use useMemo instead of useEffect to avoid infinite loop
   const finalProducts = useMemo(() => {
     if (productCode) {
-      // Filter products by product code
       return allProducts.filter((product: any) =>
         product.productCode?.toLowerCase().includes(productCode.toLowerCase())
       );
     } else if (filteredProducts.length > 0) {
-      // Use filtered products from API
       return filteredProducts;
     } else {
       return [];
     }
-  }, [productCode, filteredProducts, allProducts]); // Add proper dependencies
+  }, [productCode, filteredProducts, allProducts]);
 
   const getPageTitle = () => {
     if (productCode) {
       return `"${productCode}" məhsul kodu üçün nəticələr`;
-    } else if (subcategoryName) {
-      return `"${decodeURIComponent(subcategoryName)}" məhsulları`;
-    } else if (categoryName) {
+    }
+    //  else if (subcategoryName) {
+    //   return `"${decodeURIComponent(subcategoryName)}" məhsulları`;
+    // }
+     else if (categoryName) {
       return `"${decodeURIComponent(categoryName)}" kateqoriyası`;
+    } else if (color) {
+      const colorOption = colorOptions.find(opt => opt.value === colorValue);
+      const displayColor = colorOption ? colorOption.name : color;
+      return `"${displayColor}" rənginə görə məhsullar`;
+    } else if (gender) {
+      return `"${gender}" üçün məhsullar`;
     } else {
       return "Axtarış nəticələri";
     }

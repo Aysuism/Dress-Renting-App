@@ -44,7 +44,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         localStorage.removeItem("token");
         localStorage.removeItem("loggedInUser");
 
-        // Optional: reset Redux state if you want
+        // Reset Redux state if you want
         api.dispatch({ type: "auth/logout" });
 
         // Redirect to home

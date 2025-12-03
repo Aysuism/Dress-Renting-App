@@ -7,9 +7,11 @@ import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlin
 import Swal from "sweetalert2";
 import Fuse from "fuse.js";
 import { useGetCategoriesQuery } from "../tools/categories";
-import { useGetSubcategoriesQuery } from "../tools/subCategory";
+// import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { jwtDecode } from "jwt-decode";
 import { useGetProductsQuery } from "../tools/product";
+import { genderOptions } from "../pages/AddCloth";
+import { colorOptions } from "../pages/AddCloth";
 
 export interface HeaderProps {
   showSection: (section: string) => void;
@@ -18,7 +20,7 @@ export interface HeaderProps {
 interface SearchItem {
   id: string;
   name: string;
-  type: 'category' | 'subcategory' | 'product';
+  type: 'category' | 'subcategory' | 'gender' | 'color' | 'product';
   categoryId?: string;
   categoryName?: string;
   productCode?: string;
@@ -32,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
   const navigate = useNavigate();
 
   const { data: categories = [] } = useGetCategoriesQuery([]);
-  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
+  // const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
   const { data: products = [] } = useGetProductsQuery([]);
 
   // ------------------ User/Admin ------------------
@@ -100,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
 
   // ---------------- SEARCH ----------------
   const searchItems: SearchItem[] = useMemo(() => {
-    if (!categories?.length && !subcategories?.length && !products?.length) return [];
+    if (!categories?.length && !products?.length) return [];
 
     const categoryItems: SearchItem[] = categories.map((cat: any) => ({
       id: String(cat.id),
@@ -108,15 +110,14 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
       type: 'category' as const
     }));
 
-    const subcategoryItems: SearchItem[] = subcategories.map((sub: any) => ({
-      id: String(sub.id),
-      name: sub.name,
-      type: 'subcategory' as const,
-      categoryId: String(sub.category?.id),
-      categoryName: sub.category?.name
-    }));
+    // const subcategoryItems: SearchItem[] = subcategories.map((sub: any) => ({
+    //   id: String(sub.id),
+    //   name: sub.name,
+    //   type: 'subcategory' as const,
+    //   categoryId: String(sub.category?.id),
+    //   categoryName: sub.category?.name
+    // }));
 
-    // Add product items for product code search
     const productItems: SearchItem[] = products.map((product: any) => ({
       id: String(product.id || product.productCode),
       name: `${product.productCode} - ${product.userName} ${product.userSurname}`,
@@ -124,8 +125,20 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
       productCode: product.productCode
     }));
 
-    return [...categoryItems, ...subcategoryItems, ...productItems];
-  }, [categories, subcategories, products]);
+    const genderItems: SearchItem[] = genderOptions.map((gender: any) => ({
+      id: String(gender.id),
+      name: gender.name,
+      type: 'gender' as const,
+    }))
+
+    const colorItems: SearchItem[] = colorOptions.map((color) => ({
+      id: String(color.id),
+      name: color.name,
+      type: 'color' as const
+    }))
+
+    return [...categoryItems, ...productItems, ...genderItems, ...colorItems];
+  }, [categories, products, genderOptions, colorOptions]);
 
   const fuse = useMemo(() => {
     if (!searchItems.length) return null;
@@ -147,7 +160,6 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
     setKeyword(value);
     setShowResults(value.length > 0);
   };
-
   const handleResultClick = (item: SearchItem) => {
     setKeyword("");
     setShowResults(false);
@@ -157,32 +169,34 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
       return;
     }
 
-    const genderMap: { [key: string]: string } = {
-      "1": "MAN",
-      "2": "WOMAN",
-      "3": "KID",
-    };
-
-    const gender = "";
     const queryParams = new URLSearchParams();
 
-    if (gender) {
-      queryParams.append('gender', genderMap[gender] || gender);
+    if (item.type === 'gender') {
+      queryParams.append('gender', item.name);
+    }
+
+    if (item.type === 'color') {
+      // Find the original color option to get the English value
+      const colorOption = colorOptions.find(color =>
+        color.name === item.name || color.id === item.id
+      );
+      // Use color.value (English) for search, fallback to name if not found
+      queryParams.append('color', colorOption?.value || item.name);
     }
 
     if (item.type === 'category') {
       queryParams.append('categoryName', item.name);
-    } else if (item.type === 'subcategory') {
-      if (item.categoryName) {
-        queryParams.append('categoryName', item.categoryName);
-      }
-      queryParams.append('subcategoryName', item.name);
-    }
+    } 
+    // else if (item.type === 'subcategory') {
+    //   if (item.categoryName) {
+    //     queryParams.append('categoryName', item.categoryName);
+    //   }
+    //   queryParams.append('subcategoryName', item.name);
+    // }
 
     navigate(`/searching-result?${queryParams.toString()}`);
   };
 
-  // ---------------- UI ----------------
   return (
     <header className="p-[18px] sm:px-6 py-4 bg-white sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center gap-6">
@@ -222,11 +236,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                     <span>{item.name}</span>
                     <span className="text-xs text-gray-500 capitalize">
                       {item.type === 'category' ? 'Kateqoriya' :
-                        item.type === 'subcategory' ? 'Alt Kateqoriya' :
+                        // item.type === 'subcategory' ? 'Alt Kateqoriya' :
                           'Məhsul Kodu'}
                     </span>
                   </div>
-                  {item.type === 'subcategory' && item.categoryName && (
+                  {item.categoryName && (
                     <div className="text-xs text-gray-400 mt-1">
                       {item.categoryName}
                     </div>
@@ -342,11 +356,11 @@ const Header: React.FC<HeaderProps> = ({ showSection }) => {
                     <span>{item.name}</span>
                     <span className="text-xs text-gray-500 capitalize">
                       {item.type === 'category' ? 'Kateqoriya' :
-                        item.type === 'subcategory' ? 'Alt Kateqoriya' :
+                        // item.type === 'subcategory' ? 'Alt Kateqoriya' :
                           'Məhsul Kodu'}
                     </span>
                   </div>
-                  {item.type === 'subcategory' && item.categoryName && (
+                  {item.categoryName && (
                     <div className="text-xs text-gray-400 mt-1">
                       {item.categoryName}
                     </div>

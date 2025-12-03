@@ -27,8 +27,7 @@ const Register: React.FC = () => {
     setSuccess(false);
 
     try {
-      const res = await axios.post("http://localhost:8081/api/v1/auth/register", form);
-      console.log("✅ Register success:", res.data);
+      await axios.post("http://localhost:8081/api/v1/auth/register", form);
       setSuccess(true);
       setForm({
         name: "",

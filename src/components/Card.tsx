@@ -4,7 +4,6 @@ import slugify from "slugify";
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import listIcon from "../assets/img/product-details-icon.webp";
-import { useGetSubcategoriesQuery } from "../tools/subCategory";
 // import { useGetFavoritesQuery, useAddFavoriteMutation, useRemoveFavoriteMutation } from "../tools/wishlist";
 import { useWishlist } from "react-use-wishlist";
 
@@ -18,18 +17,13 @@ const Card = ({ clothes }: any) => {
   const mainSizes = clothes.colorAndSizes?.map((item: any) => item.sizes.map((c:string)=>c)).join(", ");
   const mainColorImage = clothes.colorAndSizes?.[0]?.imageUrls?.[0] || clothes.image;
 
-
-  const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
-
-  const subcategoryName = subcategories?.find((sc: any) => sc.id === clothes.subcategory?.id)?.name;
-
   const productId = clothes.productCode || clothes.id;
 
   const wishlistItem = {
     id: productId,
     price: clothes.price,
     image: mainColorImage,
-    category: clothes.subcategory?.name || clothes.category,
+    category: clothes.subCategoryName,
     colors: mainColor,
     size: mainSizes,
     description:clothes.description,
@@ -77,7 +71,7 @@ const Card = ({ clothes }: any) => {
         <div className="flex justify-between gap-4">
           <p>Kateqoriya:
             <span className="text-gray-500 ms-1">
-              {subcategoryName}
+              {clothes.subCategoryName}
             </span>
           </p>
           <p>

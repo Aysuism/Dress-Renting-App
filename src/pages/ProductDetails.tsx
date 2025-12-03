@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import { useState } from "react";
 import slugify from "slugify";
 import img from "../assets/img/jacket.jpg";
@@ -6,9 +6,10 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import mailIcon from "../assets/img/mail-icon.webp";
 import phoneLightIcon from "../assets/img/phone-light-icon.webp";
 import phoneDarkIcon from "../assets/img/phone-dark-icon.webp";
-import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { useGetProductsQuery } from "../tools/product";
 import type { ColorAndSize, Offer } from "../tools/homeFilter";
+import { sizeOptions, type Option } from "./AddCloth";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
 
 export interface Product {
     userName: string;
@@ -16,16 +17,11 @@ export interface Product {
     userEmail: string;
     userPhone: string;
     productCode: string;
-    subcategory: {
-        id: number;
-        name: string;
-        category: {
-            id: number;
-            name: string
-        };
-    };
+    subCategoryName: string;
+    subCategoryId: string;
+    brandName: string;
     price: number;
-    gender: "WOMAN" | "MAN" | "KID";
+    genders: string[];
     description: string;
     colorAndSizes: ColorAndSize[];
     createdAt: string;
@@ -40,9 +36,9 @@ const ProductDetails = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const { data: products = [], isLoading: isProductLoading } = useGetProductsQuery([]);
-    const { data: subcategories = [], isLoading: isSubLoading } = useGetSubcategoriesQuery([]);
+    const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
 
-    if (isProductLoading || isSubLoading) return <div>Loading...</div>;
+    if (isProductLoading) return <div>Loading...</div>;
 
     const product: Product | undefined = products.find((p: any) =>
         slugify(String(p.productCode), { lower: true }) === slugify(String(urlid), { lower: true })
@@ -50,7 +46,6 @@ const ProductDetails = () => {
 
     if (!product) return <Navigate to="/not-found" replace />;
 
-    const subcategoryName = subcategories?.find((sc: any) => sc.id === product.subcategory.id)?.name;
 
     const colorAndSizes = product.colorAndSizes as any;
     const colors = Array.from(new Set(colorAndSizes.map((item: any) => item.color))) as string[];
@@ -61,12 +56,44 @@ const ProductDetails = () => {
         .flatMap((cs: any) => cs.sizes.map((item: any) => item));
 
     const images = colorAndSizes.find((cs: any) => cs.color === activeColor)?.imageUrls || [img] as string[];
-    console.log(product);
+
+    const formatAzNumber = (number: string) => {
+        const digits = number.replace(/\D/g, "");
+        const match = digits.match(/^(?:\+?994)?(\d{2})(\d{3})(\d{2})(\d{2})$/);
+        return match ? `+994 ${match[1]} ${match[2]} ${match[3]} ${match[4]}` : number;
+    };
+
+    const selectedSizes: Option[] = (() => {
+        const sub = subcategories.find((s: any) => String(s.id) === String(product.subCategoryId));
+        const genderList = sub?.genders || [];
+        const categoryName = sub?.category?.name || product.subCategoryName;
+
+        if (!categoryName) return [];
+
+        // ---------------- ACCESSORIES → no sizes ----------------
+        if (categoryName === "Aksesuar") return [];
+
+        // ---------------- SHOES ----------------
+        if (categoryName === "Ayaqqabı") {
+            return sizeOptions
+                .filter((s: any) => s.category === "Ayaqqabı" &&
+                    (genderList.includes("KID") ? s.genders === "KID" : !s.genders)
+                )
+                .map((s: any) => ({ id: s.id, name: s.name, value: s.value }));
+        }
+
+        // ---------------- OTHER CATEGORIES ----------------
+        return sizeOptions
+            .filter((s: any) => !s.category &&
+                (genderList.includes("KID") ? s.genders === "KID" : !s.genders)
+            )
+            .map((s: any) => ({ id: s.id, name: s.name, value: s.value }));
+    })();
 
     return (
         <div className="py-10 ">
             <p className="mb-4 text-[#4A5565] text-[14px] flex items-center">
-                <Link to="/" className="hover:text-black">Əsas</Link>
+                <button onClick={() => window.history.back()} className="hover:text-black cursor-pointer">Əsas</button>
                 <ChevronLeftIcon className="translate-y-[1px]" />
                 Məhsul Detalı
             </p>
@@ -108,7 +135,7 @@ const ProductDetails = () => {
                 {/* Product Info */}
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-semibold">{subcategoryName}</h1>
+                        <h1 className="text-2xl font-semibold">{product.subCategoryName}</h1>
                         <div className="flex items-baseline mt-2">
                             <span className="text-2xl font-semibold">{product.price} AZN</span>
                         </div>
@@ -133,6 +160,16 @@ const ProductDetails = () => {
                         <span className="">{product.productCode}</span>
                     </div>
 
+                    {/* Gender */}
+                    <div className="flex items-center">
+                        <p className="font-medium mr-3">Cins:</p>
+                        <span>
+                            {product.genders
+                                .map(g => g === "WOMAN" ? "Qadın" : g === "MAN" ? "Kişi" : "Uşaq")
+                                .join(", ")}
+                        </span>
+                    </div>
+
                     {/* Condition */}
                     <div className="flex items-center">
                         <p className="font-medium mr-3">Vəziyyət:</p>
@@ -150,10 +187,11 @@ const ProductDetails = () => {
                         <p className="font-medium">Ölçü:</p>
 
                         <div className="flex flex-wrap gap-2 mt-4">
-                            {["XS", "S", "M", "L", "XL", "XXL"].map(size => (
-                                <div key={size}
-                                    className={`w-[72px] h-[42px] rounded-md font-medium flex items-center justify-center ${availableSizes.includes(size) ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"}`}>
-                                    {size}
+                            {selectedSizes.map(size => (
+                                <div key={size.id}
+                                    className={`w-[72px] h-[42px] rounded-md font-medium flex items-center justify-center ${availableSizes.includes(size.value) ? "bg-black text-white" : "bg-[#E5E7EB] text-[#4A5565]"
+                                        }`}>
+                                    {size.name}
                                 </div>
                             ))}
                         </div>
@@ -176,7 +214,7 @@ const ProductDetails = () => {
                             className="group flex items-center justify-center gap-3 h-[48px] bg-black text-white p-3 rounded-lg border-2 hover:bg-white hover:text-black transition-all duration-300">
                             <img src={phoneLightIcon} alt="phoneIcon" className="w-5 h-5 block group-hover:hidden" />
                             <img src={phoneDarkIcon} alt="phoneIcon" className="w-5 h-5 hidden group-hover:block" />
-                            {product.userPhone}
+                            {formatAzNumber(product.userPhone)}
                         </a>
                     </div>
                 </div>

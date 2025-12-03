@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { CheckIcon } from "lucide-react";
@@ -7,12 +7,15 @@ import { useAddProductsMutation } from "../tools/product";
 import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { useGetCategoriesQuery } from "../tools/categories";
 import SelectButton from "../components/SelectButton";
+import { useGetBrandsQuery } from "../tools/brands";
 
 // ------------------- TYPES -------------------
-interface Option {
+export interface Option {
   id: string;
   name: string;
   value: string;
+  genders?: string[] | string;
+  category?: string;
 }
 
 interface Category {
@@ -23,6 +26,7 @@ interface Category {
 interface Subcategory {
   id: string;
   name: string;
+  genders: string[];
   category: {
     id: string;
     name: string;
@@ -42,17 +46,23 @@ interface FormData {
   userSurname: string;
   userEmail: string;
   userPhone: string;
+  userPhoneDisplay: string,
   productCode: string;
-  gender: string;
+  brand: {
+    id: string,
+    name: string;
+  };
+  genders: string[];
   subcategory: {
     id: string;
     name: string;
+    genders: string[];
     category: {
       id: string;
       name: string;
     };
   };
-  price: number;
+  price: number | string;
   description: string;
   offerType: string;
   condition: string;
@@ -75,16 +85,59 @@ export const colorOptions: Option[] = [
   { id: "12", name: "Bej", value: "BEIGE" },
 ];
 
-const sizeOptions: Option[] = [
+export const sizeOptions: Option[] = [
+  // Adult
   { id: "1", name: "XS", value: "XS" },
   { id: "2", name: "S", value: "S" },
   { id: "3", name: "M", value: "M" },
   { id: "4", name: "L", value: "L" },
   { id: "5", name: "XL", value: "XL" },
   { id: "6", name: "XXL", value: "XXL" },
+  // KID 
+  { id: "7", name: "0-1 yaş", value: "0-1", genders: "KID" },
+  { id: "8", name: "1-2 yaş", value: "1-2", genders: "KID" },
+  { id: "9", name: "2-3 yaş", value: "2-3", genders: "KID" },
+  { id: "10", name: "3-4 yaş", value: "3-4", genders: "KID" },
+  { id: "11", name: "4-5 yaş", value: "4-5", genders: "KID" },
+  { id: "12", name: "5-6 yaş", value: "5-6", genders: "KID" },
+  { id: "13", name: "6-7 yaş", value: "6-7", genders: "KID" },
+  { id: "14", name: "7-8 yaş", value: "7-8", genders: "KID" },
+  { id: "15", name: "8-9 yaş", value: "8-9", genders: "KID" },
+  { id: "16", name: "9-10 yaş", value: "9-10", genders: "KID" },
+  { id: "17", name: "10-11 yaş", value: "10-11", genders: "KID" },
+  { id: "18", name: "11-12 yaş", value: "11-12", genders: "KID" },
+  { id: "19", name: "12-13 yaş", value: "12-13", genders: "KID" },
+  { id: "20", name: "13-14 yaş", value: "13-14", genders: "KID" },
+  // Shoes
+  { id: "21", name: "21", value: "21", category: "Ayaqqabı", genders: "KID" },
+  { id: "22", name: "22", value: "22", category: "Ayaqqabı", genders: "KID" },
+  { id: "23", name: "23", value: "23", category: "Ayaqqabı", genders: "KID" },
+  { id: "24", name: "24", value: "24", category: "Ayaqqabı", genders: "KID" },
+  { id: "25", name: "25", value: "25", category: "Ayaqqabı", genders: "KID" },
+  { id: "26", name: "26", value: "26", category: "Ayaqqabı", genders: "KID" },
+  { id: "27", name: "27", value: "27", category: "Ayaqqabı", genders: "KID" },
+  { id: "28", name: "28", value: "28", category: "Ayaqqabı", genders: "KID" },
+  { id: "29", name: "29", value: "29", category: "Ayaqqabı", genders: "KID" },
+  { id: "30", name: "30", value: "30", category: "Ayaqqabı", genders: "KID" },
+  { id: "31", name: "31", value: "31", category: "Ayaqqabı", genders: "KID" },
+  { id: "32", name: "32", value: "32", category: "Ayaqqabı", genders: "KID" },
+  { id: "33", name: "33", value: "33", category: "Ayaqqabı", genders: "KID" },
+  { id: "34", name: "34", value: "34", category: "Ayaqqabı", genders: "KID" },
+  { id: "35", name: "35", value: "35", category: "Ayaqqabı", genders: "KID" },
+  { id: "36", name: "36", value: "36", category: "Ayaqqabı" },
+  { id: "37", name: "37", value: "37", category: "Ayaqqabı" },
+  { id: "38", name: "38", value: "38", category: "Ayaqqabı" },
+  { id: "39", name: "39", value: "39", category: "Ayaqqabı" },
+  { id: "40", name: "40", value: "40", category: "Ayaqqabı" },
+  { id: "41", name: "41", value: "41", category: "Ayaqqabı" },
+  { id: "42", name: "42", value: "42", category: "Ayaqqabı" },
+  { id: "43", name: "43", value: "43", category: "Ayaqqabı" },
+  { id: "44", name: "44", value: "44", category: "Ayaqqabı" },
+  { id: "45", name: "45", value: "45", category: "Ayaqqabı" },
+  { id: "46", name: "46", value: "46", category: "Ayaqqabı" },
 ];
 
-const offerTypeOptions: Option[] = [
+export const offerTypeOptions: Option[] = [
   { id: "1", name: "Kirayə", value: "RENT" },
   { id: "2", name: "Satış", value: "SALE" },
 ];
@@ -94,7 +147,7 @@ export const conditionOptions: Option[] = [
   { id: "2", name: "İkinci Əl", value: "SECOND_HAND" },
 ];
 
-const genderOptions: Option[] = [
+export const genderOptions: Option[] = [
   { id: "1", name: "Qadın", value: "WOMAN" },
   { id: "2", name: "Kişi", value: "MAN" },
   { id: "3", name: "Uşaq", value: "KID" },
@@ -121,6 +174,7 @@ const getColorClass = (colorValue: string) => {
 
 // ------------------- MAIN COMPONENT -------------------
 const AddCloth: React.FC = () => {
+  const { data: brands = [] } = useGetBrandsQuery([]);
   const { data: categories = [] } = useGetCategoriesQuery([]);
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
   const [addProducts, { isLoading }] = useAddProductsMutation();
@@ -131,17 +185,23 @@ const AddCloth: React.FC = () => {
     userSurname: "",
     userEmail: "",
     userPhone: "",
+    userPhoneDisplay: "",
     productCode: "",
-    gender: "",
+    genders: [],
+    brand: {
+      id: "",
+      name: "",
+    },
     subcategory: {
       id: "",
       name: "",
+      genders: [],
       category: {
         id: "",
         name: "",
       },
     },
-    price: 0,
+    price: "",
     description: "",
     offerType: "",
     condition: "",
@@ -154,24 +214,26 @@ const AddCloth: React.FC = () => {
   useEffect(() => {
     if (!subcategories.length) return;
 
-    if (!formData.subcategory.category.id) {
-      setFilteredSubcategories(subcategories);
-    } else {
-      const filtered = subcategories.filter(
+    let filtered = subcategories;
+
+    if (formData.subcategory.category.id) {
+      filtered = filtered.filter(
         (sc: Subcategory) => sc.category.id === formData.subcategory.category.id
       );
-      setFilteredSubcategories(filtered);
     }
-  }, [formData.subcategory.category.id, subcategories]);
+
+    if (formData.genders.length > 0) {
+      filtered = filtered.filter(
+        (sc: Subcategory) => sc.genders.includes(formData.genders[0])
+      );
+    }
+
+    setFilteredSubcategories(filtered);
+  }, [formData.genders, formData.subcategory.category.id, subcategories]);
 
   // ------------------- OPTIONS FOR SELECTS -------------------
-  const genderSelectOptions: Option[] = [
-    { id: "0", name: "Cins seçin", value: "" },
-    ...genderOptions,
-  ];
 
   const categorySelectOptions: Option[] = [
-    { id: "0", name: "Kateqoriya seçin", value: "" },
     ...categories.map((c: Category) => ({
       id: c.id,
       name: c.name,
@@ -180,10 +242,10 @@ const AddCloth: React.FC = () => {
   ];
 
   const subcategorySelectOptions: Option[] = [
-    { id: "0", name: "Alt kateqoriya seçin", value: "" },
     ...filteredSubcategories.map((sc: Subcategory) => ({
       id: sc.id,
       name: sc.name,
+      genders: sc.genders,
       value: sc.id,
     })),
   ];
@@ -196,7 +258,10 @@ const AddCloth: React.FC = () => {
   };
 
   const handleGenderSelect = (value: string) => {
-    setFormData((prev) => ({ ...prev, gender: value }));
+    setFormData((prev) => ({
+      ...prev,
+      genders: value ? [value] : []
+    }));
   };
 
   const handleCategorySelect = (value: string) => {
@@ -206,6 +271,7 @@ const AddCloth: React.FC = () => {
       subcategory: {
         id: "",
         name: "",
+        genders: [],
         category: selectedCategory
           ? { id: selectedCategory.id, name: selectedCategory.name }
           : { id: "", name: "" },
@@ -222,6 +288,7 @@ const AddCloth: React.FC = () => {
         subcategory: {
           id: "",
           name: "",
+          genders: [],
           category: { id: "", name: "" },
         },
       }));
@@ -234,6 +301,7 @@ const AddCloth: React.FC = () => {
       subcategory: {
         id: selectedSubcategory.id,
         name: selectedSubcategory.name,
+        genders: selectedSubcategory.genders,
         category: parentCategory
           ? { id: parentCategory.id, name: parentCategory.name }
           : { id: "", name: "" },
@@ -269,6 +337,31 @@ const AddCloth: React.FC = () => {
       }),
     }));
   };
+
+
+  const selectedSubcategory = categorySelectOptions.find(
+    (cat) => cat.id === formData.subcategory.category.id
+  );
+
+  const filteredSizes = sizeOptions.filter((size) => {
+    if (!selectedSubcategory) return false;
+
+    if (selectedSubcategory.name === "Aksesuar") return false;
+
+    if (formData.genders[0] === "KID") {
+      if (selectedSubcategory.name === "Ayaqqabı") {
+        return size.genders === "KID" && size.category === "Ayaqqabı"
+      }
+      return size.genders === "KID" && !size.category;
+    } else {
+      if (selectedSubcategory.name === "Ayaqqabı") {
+        return size.category === "Ayaqqabı" && size.genders !== "KID";
+      }
+    }
+
+    return !size.genders && !size.category;
+  });
+
 
   const handleImageUpload = (colorValue: string, files: FileList | null) => {
     if (!files) return;
@@ -331,7 +424,7 @@ const AddCloth: React.FC = () => {
     if (!formData.userPhone.trim() || formData.userPhone.length !== 9)
       newErrors.userPhone = "Telefon nömrəsi düzgün daxil edilməyib";
 
-    if (!formData.gender) newErrors.gender = "Cins seçin";
+    if (!formData.genders || formData.genders.length === 0) newErrors.genders = "Cins seçin";
     if (!formData.subcategory.category.id) newErrors.category = "Kateqoriya seçin";
     if (!formData.subcategory.id) newErrors.subcategory = "Alt kateqoriya seçin";
     if (!formData.offerType) newErrors.offerType = "İstifadə forması seçin";
@@ -388,9 +481,9 @@ const AddCloth: React.FC = () => {
       userSurname: formData.userSurname,
       userEmail: formData.userEmail,
       userPhone: `+994${formData.userPhone}`,
-      gender: formData.gender,
-      subcategoryId: formData.subcategory.id,
-      categoryId: formData.subcategory.category.id,
+      genders: formData.genders,
+      brandId: formData.brand.id,
+      subCategoryId: formData.subcategory.id,
       offerType: formData.offerType,
       condition: formData.condition,
       description: formData.description,
@@ -426,7 +519,6 @@ const AddCloth: React.FC = () => {
 
     try {
       const response = await addProducts(formPayload).unwrap();
-      console.log("Backend cavabı:", response);
 
       const productCode = response.productCode || response.id || response.code;
 
@@ -434,8 +526,8 @@ const AddCloth: React.FC = () => {
         icon: "success",
         title: "Uğurla göndərildi!",
         html: productCode
-          ? `Məhsulunuz əlavə edildi.<br><strong>Məhsul Kodu: ${productCode}</strong>`
-          : "Məhsulunuz əlavə edildi",
+          ? `Məhsulunuz təsdiqə göndərildi.<br><strong>Məhsul Kodu: ${productCode}</strong>`
+          : "Məhsulunuz təsdiqə göndərildi",
         showConfirmButton: true,
         confirmButtonText: "OK",
       });
@@ -445,14 +537,20 @@ const AddCloth: React.FC = () => {
         userSurname: "",
         userEmail: "",
         userPhone: "",
+        userPhoneDisplay: "",
         productCode: "",
-        gender: "",
+        genders: [],
+        brand: {
+          id: "",
+          name: "",
+        },
         subcategory: {
           id: "",
           name: "",
+          genders: [],
           category: { id: "", name: "" },
         },
-        price: 0,
+        price: "",
         description: "",
         offerType: "",
         condition: "",
@@ -460,7 +558,7 @@ const AddCloth: React.FC = () => {
       });
       setErrors({});
     } catch (error: any) {
-      console.error("Submission error:", error);
+      console.log(error)
       Swal.fire({
         icon: "error",
         title: "Xəta!",
@@ -535,11 +633,23 @@ const AddCloth: React.FC = () => {
               </div>
               <input
                 name="userPhone"
-                value={formData.userPhone}
-                maxLength={9}
+                value={formData.userPhoneDisplay}
+                maxLength={20}
                 onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
-                  setFormData((prev) => ({ ...prev, userPhone: digits }));
+                  const raw = e.target.value.replace(/\D/g, "").slice(0, 9);
+
+                  // mask preparation
+                  let f = "";
+                  if (raw.length > 0) f = raw.slice(0, 2);
+                  if (raw.length >= 3) f += " " + raw.slice(2, 5);
+                  if (raw.length >= 6) f += " " + raw.slice(5, 7);
+                  if (raw.length >= 8) f += " " + raw.slice(7, 9);
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    userPhone: raw,          // (553214545) for backend
+                    userPhoneDisplay: f,     // (55 321 45 45) for view
+                  }));
                 }}
                 className="pl-16 pr-4 py-3 border rounded-lg outline-none w-full border-[#D4D4D4]"
                 placeholder="xx xxx xx xx"
@@ -551,12 +661,12 @@ const AddCloth: React.FC = () => {
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-black">Cins</label>
             <SelectButton
-              selected={formData.gender}
+              selected={formData.genders[0] || ""}
               setSelected={handleGenderSelect}
-              options={genderSelectOptions}
+              options={genderOptions}
               default="Cins"
             />
-            {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
+            {errors.genders && <p className="text-red-500 text-sm mt-1">{errors.genders}</p>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -603,6 +713,24 @@ const AddCloth: React.FC = () => {
             {errors.condition && <p className="text-red-500 text-sm mt-1">{errors.condition}</p>}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-black">Brend</label>
+            <SelectButton
+              selected={formData.brand.id}
+              setSelected={(value) =>
+                setFormData(prev => ({
+                  ...prev,
+                  brand: {
+                    id: value,
+                    name: brands.find((b: any) => String(b.id) === value)?.name || "",
+                  }
+                }))
+              }
+              options={brands.map((b: any) => ({ value: b.id, name: b.name }))}
+              default="Brend seçin"
+            />
+          </div>
+
           <div className="col-span-1 sm:col-span-2">
             <h3 className="text-lg font-medium mb-4">Rəng Seçimi</h3>
             <div className="grid grid-cols-6 gap-4 mb-2 bg-white border border-[#D4D4D4] rounded-lg p-5">
@@ -627,25 +755,29 @@ const AddCloth: React.FC = () => {
                 <div className={`w-8 h-8 rounded-lg ${getColorClass(cs.color)} border border-gray-300`} />
               </div>
 
-              <div className="w-full grid grid-cols-1 gap-3 mb-4">
-                <label className="text-md font-medium">Ölçülər</label>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {sizeOptions.map((size) => (
-                    <button
-                      key={size.id}
-                      type="button"
-                      onClick={() => handleSizeSelect(cs.color, size.value)}
-                      className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${cs.sizes.includes(size.value) ? "bg-black text-white" : "bg-[#E5E7EB] text-gray-600"
-                        }`}
-                    >
-                      {size.name}
-                    </button>
-                  ))}
+              {filteredSizes.length > 0 && (
+                <div className="w-full grid grid-cols-1 gap-3 mb-4">
+                  <label className="text-md font-medium">Ölçülər</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {filteredSizes.map((size) => (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => handleSizeSelect(cs.color, size.value)}
+                        className={`cursor-pointer w-full h-[50px] flex justify-center items-center rounded-lg ${cs.sizes.includes(size.value)
+                          ? "bg-black text-white"
+                          : "bg-[#E5E7EB] text-gray-600"
+                          }`}
+                      >
+                        {size.name}
+                      </button>
+                    ))}
+                  </div>
+                  {errors[`colorAndSizes[${index}].sizes`] && (
+                    <p className="text-red-500 text-sm mt-1">{errors[`colorAndSizes[${index}].sizes`]}</p>
+                  )}
                 </div>
-                {errors[`colorAndSizes[${index}].sizes`] && (
-                  <p className="text-red-500 text-sm mt-1">{errors[`colorAndSizes[${index}].sizes`]}</p>
-                )}
-              </div>
+              )}
 
               {/* Image */}
               <div>
@@ -696,21 +828,23 @@ const AddCloth: React.FC = () => {
 
           {/* Price */}
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
-            <label className="text-sm font-medium text-black mb-2">Qiymət</label>
+            <label className="text-sm font-medium text-black mb-2">Qiymət (AZN)</label>
             <input
-              type="number"
+              type="text"
               name="price"
               value={formData.price}
               onChange={(e) => {
-                const value = e.target.value;
-                setFormData((prev: any) => ({
+                const val = e.target.value;
+                if (!/^\d*\.?\d*$/.test(val)) return;
+
+                setFormData(prev => ({
                   ...prev,
-                  price: value === "" ? "" : parseFloat(value),
+                  price: val,
                 }));
               }}
               className="px-4 py-3 border rounded-lg outline-none border-[#D4D4D4]"
               placeholder="0"
-              step="0.01"
+              inputMode="decimal"
             />
 
             {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}

@@ -54,6 +54,10 @@ const ProductManagement = () => {
         }
     };
 
+    const sortedProducts = [...displayedProducts].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
     return (
         <div className="space-y-6">
             {/* Tabs */}
@@ -79,12 +83,12 @@ const ProductManagement = () => {
             </div>
 
             {/* Product List */}
-            {displayedProducts.length === 0 ? (
+            {sortedProducts.length === 0 ? (
                 <div className="text-center p-10 border rounded-lg bg-gray-50 text-gray-500">
                     No products found.
                 </div>
             ) : (
-                displayedProducts.map((p: Product) => {
+                sortedProducts.map((p: Product) => {
                     const sizeInfo = p.colorAndSizes.map((cs) => cs.sizes.join(", "));
 
                     return (
@@ -97,9 +101,10 @@ const ProductManagement = () => {
                                     <p><strong>Email:</strong> {p.userEmail}</p>
                                     <p><strong>Telefon:</strong> {p.userPhone}</p>
                                     <p><strong>Price:</strong> {p.price || "Not set"}</p>
-                                    <p><strong>Gender:</strong> {p.gender || "Not specified"}</p>
+                                    <p><strong>Gender:</strong> {p.genders || "Not specified"}</p>
                                     <p><strong>Size:</strong> {sizeInfo.join("; ") || "Not specified"}</p>
-                                    <p><strong>Subcategory:</strong> {p.subcategory?.name}</p>
+                                    <p><strong>Subcategory:</strong> {p.subCategoryName}</p>
+                                    <p><strong>Brand:</strong> {p.brandName}</p>
                                     <p><strong>Created:</strong> {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "Unknown"}</p>
                                 </div>
 

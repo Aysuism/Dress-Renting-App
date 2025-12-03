@@ -18,8 +18,6 @@ const Login = () => {
     axios
       .post("http://localhost:8081/api/v1/auth/login", { email, password })
       .then((res) => {
-        console.log("Login success!", res.data);
-
         setCookie("token", res.data.accessToken, { path: "/" });
         setCookie("refreshToken", res.data.refreshToken, { path: "/" });
 

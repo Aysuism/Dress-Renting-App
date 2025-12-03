@@ -1,160 +1,183 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import SelectButton from "../components/SelectButton";
-import { colorOptions, conditionOptions } from "./AddCloth";
+import { colorOptions, conditionOptions, genderOptions, offerTypeOptions, sizeOptions } from "./AddCloth";
 import { useGetCategoriesQuery } from "../tools/categories";
-import { useGetSubcategoriesQuery } from "../tools/subCategory";
 import { useFilterProductsQuery } from "../tools/homeFilter";
 import type { Option } from "../tools/types";
 import { useGetProductsQuery } from "../tools/product";
-
-const sizeOptionsList: Option[] = [
-  { id: "1", name: "XS", value: "XS" },
-  { id: "2", name: "S", value: "S" },
-  { id: "3", name: "M", value: "M" },
-  { id: "4", name: "L", value: "L" },
-  { id: "5", name: "XL", value: "XL" },
-  { id: "6", name: "XXL", value: "XXL" },
-];
-
-export const genderOptions: Option[] = [
-  { id: "1", name: "Qadın", value: "WOMAN" },
-  { id: "2", name: "Kişi", value: "MAN" },
-  { id: "3", name: "Uşaq", value: "KID" },
-];
-
+import Pagination from "../components/Pagination";
+import { useGetSubcategoriesQuery } from "../tools/subCategory";
+import { useGetBrandsQuery } from "../tools/brands";
 
 const Home = () => {
-  const [selectedGender, setSelectedGender] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Read initial filter values from URL
+  const [selectedSubcategory, setSelectedSubcategory] = useState(searchParams.get("subcategory") || "");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "");
+  const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "");
+  const [selectedGender, setSelectedGender] = useState(searchParams.get("gender") || "");
+  const [selectedColor, setSelectedColor] = useState(searchParams.get("color") || "");
+  const [selectedSize, setSelectedSize] = useState(searchParams.get("size") || "");
+  const [selectedProductCondition, setSelectedProductCondition] = useState(searchParams.get("condition") || "");
+  const [selectedOffertype, setSelectedOffertype] = useState(searchParams.get("offertype") || "");
+  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
 
   const { data: products = [] } = useGetProductsQuery([]);
   const { data: categories = [] } = useGetCategoriesQuery([]);
   const { data: subcategories = [] } = useGetSubcategoriesQuery([]);
-  // const { data: offerProducts = [] } = useGetByOfferTypeQuery({
-  //   offerType: "SALE",
-  //   productCondition: "SECOND_HAND",
-  // });
-  const [selectedProductCondition, setSelectedProductCondition] = useState<string>("");
+  const { data: brands = [] } = useGetBrandsQuery([]);
 
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (selectedCategory) params.category = selectedCategory;
+    if (selectedSubcategory) params.subcategory = selectedSubcategory;
+    if (selectedGender) params.gender = selectedGender;
+    if (selectedColor) params.color = selectedColor;
+    if (selectedSize) params.size = selectedSize;
+    if (selectedBrand) params.brand = selectedBrand;
+    if (selectedProductCondition) params.condition = selectedProductCondition;
+    if (selectedOffertype) params.offertype = selectedOffertype;
+    if (minPrice) params.minPrice = minPrice;
+    if (maxPrice) params.maxPrice = maxPrice;
+
+    setSearchParams(params);
+  }, [selectedCategory, selectedSubcategory, selectedGender, selectedColor, selectedSize, selectedBrand, selectedProductCondition, selectedOffertype, minPrice, maxPrice, setSearchParams]);
+
+  useEffect(() => {
+    setSelectedCategory("");
+    setSelectedSize("");
+  }, [selectedGender]);
+
+  useEffect(() => {
+    setSelectedSize("");
+  }, [selectedCategory]);
+
+  const { data: filteredProducts = [], isLoading } = useFilterProductsQuery(
+    {
+      categoryId: selectedCategory ? Number(selectedCategory) : undefined,
+      subCategoryId: selectedSubcategory ? Number(selectedSubcategory) : undefined,
+      brandId: selectedBrand ? Number(selectedBrand) : undefined,
+      gender: selectedGender,
+      color: selectedColor,
+      sizes: selectedSize ? [selectedSize] : [],
+      offerType: selectedOffertype,
+      productCondition: selectedProductCondition,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+    },
+    {
+      skip:
+        !selectedCategory &&
+        !selectedSubcategory &&
+        !selectedGender &&
+        !selectedColor &&
+        !selectedSize &&
+        !selectedOffertype &&
+        !selectedProductCondition &&
+        !minPrice &&
+        !maxPrice,
+    }
+  );
+
+  let displayProducts = selectedCategory || selectedSubcategory || selectedGender || selectedColor || selectedSize || selectedOffertype || selectedProductCondition || minPrice || maxPrice
+    ? filteredProducts
+    : products;
+
+  // ---------------- CATEGORY OPTIONS ----------------
   const categoryOptions: Option[] = categories.map((cat: any) => ({
     id: String(cat.id),
     name: cat.name,
     value: String(cat.id),
   }));
 
-  const filteredSubcategories: Option[] = selectedCategory
-    ? subcategories
-      .filter((sub: any) => String(sub.category.id) === selectedCategory)
-      .map((sub: any) => ({
-        id: String(sub.id),
-        name: sub.name,
-        value: String(sub.id),
-      }))
-    : subcategories.map((sub: any) => ({
+  // ---------------- SUBCATEGORY OPTIONS ----------------
+  const subcategoryOptions: Option[] = subcategories
+    .filter((sub: any) => {
+      const matchCategory = selectedCategory
+        ? String(sub.category.id) === selectedCategory
+        : true;
+
+      const matchGender = selectedGender
+        ? sub.genders?.includes(selectedGender)
+        : true;
+
+      return matchCategory && matchGender;
+    })
+    .map((sub: any) => ({
       id: String(sub.id),
       name: sub.name,
       value: String(sub.id),
     }));
 
-
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setSelectedSubcategory("");
-  };
-
-  const { data: filteredProducts = [], isLoading } = useFilterProductsQuery(
-    {
-      gender: selectedGender,
-      categoryId: selectedCategory ? Number(selectedCategory) : undefined,
-      subcategoryId: selectedSubcategory ? Number(selectedSubcategory) : undefined,
-      color: selectedColor,
-      sizes: selectedSize,
-      minPrice: minPrice ? Number(minPrice) : undefined,
-      maxPrice: maxPrice ? Number(maxPrice) : undefined,
-    },
-    {
-      skip:
-        !selectedGender &&
-        !selectedCategory &&
-        !selectedSubcategory &&
-        !selectedColor &&
-        !selectedSize &&
-        !minPrice &&
-        !maxPrice,
-    }
+  // ---------------- SELECTED SUBCATEGORY DATA ----------------
+  const selectedSubcategoryData = subcategories.find(
+    (c: any) => String(c.id) === selectedSubcategory
   );
 
-  let displayProducts = selectedGender || selectedCategory || selectedSubcategory || selectedColor || selectedSize || minPrice || maxPrice
-    ? filteredProducts
-    : products;
+  // ---------------- SELECTED CATEGORY DATA ----------------
+  const selectedCategoryData = categories.find(
+    (c: any) => String(c.id) === selectedCategory
+  );
 
-  if (selectedProductCondition) {
-    displayProducts = displayProducts.filter(
-      (item: any) => item.offers?.[0]?.productCondition === selectedProductCondition
-    );
-  }
+  const dynamicSizeOptions: Option[] = (() => {
+    // Determine category name from either selectedCategory or subcategory
+    const categoryName = selectedSubcategoryData?.category?.name || selectedCategoryData?.name;
+
+    if (!categoryName) return [];
+
+    // ACCESSORIES → no size
+    if (categoryName === "Aksesuar") return [];
+
+    // SHOES → return sizes where category = "Ayaqqabı"
+    if (categoryName === "Ayaqqabı") {
+      return sizeOptions
+        .filter((s: any) => s.category === "Ayaqqabı")
+        .map((s: any) => ({ id: s.id, name: s.name, value: s.value }));
+    }
+
+    // OTHER CLOTHING → sizes without category
+    return sizeOptions
+      .filter((s: any) => !s.category)
+      .map((s: any) => ({ id: s.id, name: s.name, value: s.value }));
+  })();
+
+  //-----------------Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const cardsPerPage = 12;
+  const indexOfLast = currentPage * cardsPerPage;
+  const indexOfFirst = indexOfLast - cardsPerPage;
+  const sortedProducts = [...displayProducts].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const currentProducts = sortedProducts.slice(indexOfFirst, indexOfLast);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="flex flex-col py-10">
       {/* Filters */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 py-3">
+        <SelectButton options={genderOptions} selected={selectedGender} setSelected={setSelectedGender} default="Cins" />
+        <SelectButton options={categoryOptions} selected={selectedCategory} setSelected={setSelectedCategory} default="Kateqoriya" />
+        <SelectButton options={subcategoryOptions} selected={selectedSubcategory} setSelected={setSelectedSubcategory} default="Alt kateqoriya" />
+        <SelectButton options={brands.map((b: any) => ({
+          id: String(b.id),
+          name: b.name,
+          value: String(b.id),
+        }))} selected={selectedBrand} setSelected={setSelectedBrand} default="Brend" />
+        <SelectButton options={colorOptions} selected={selectedColor} setSelected={setSelectedColor} default="Rəng" />
+        <SelectButton options={dynamicSizeOptions} selected={selectedSize} setSelected={setSelectedSize} default="Ölçü" />
+        <SelectButton options={conditionOptions} selected={selectedProductCondition} setSelected={setSelectedProductCondition} default="Məhsul vəziyyəti" />
+        <SelectButton options={offerTypeOptions} selected={selectedOffertype} setSelected={setSelectedOffertype} default="İstifadə forması" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 py-3">
-        {/* Gender */}
-        <SelectButton
-          options={genderOptions}
-          selected={selectedGender}
-          setSelected={setSelectedGender}
-          default="Cins"
-        />
-
-        {/* Category */}
-        <SelectButton
-          options={categoryOptions}
-          selected={selectedCategory}
-          setSelected={handleCategoryChange}
-          default="Kateqoriya"
-        />
-
-        {/* Subcategory */}
-        <SelectButton
-          options={filteredSubcategories}
-          selected={selectedSubcategory}
-          setSelected={setSelectedSubcategory}
-          default="Alt kateqoriya"
-        />
-
-        {/* Color */}
-        <SelectButton
-          options={colorOptions}
-          selected={selectedColor}
-          setSelected={setSelectedColor}
-          default="Rəng"
-        />
-
-        {/* Size */}
-        <SelectButton
-          options={sizeOptionsList}
-          selected={selectedSize}
-          setSelected={setSelectedSize}
-          default="Ölçü"
-        />
-
-        {/* Product Condition */}
-        <SelectButton
-          options={conditionOptions}
-          selected={selectedProductCondition}
-          setSelected={setSelectedProductCondition}
-          default="Məhsul vəziyyəti"
-        />
-
-
-        {/* Price Inputs */}
         <input
           type="text"
           inputMode="numeric"
@@ -181,15 +204,22 @@ const Home = () => {
           <div className="col-span-full text-center text-gray-500 text-lg py-20">
             Loading...
           </div>
-        ) : displayProducts?.length > 0 ? (
-          displayProducts.map((item: any) => (
-            <Card key={item.productCode} clothes={item} />
-          ))
+        ) : currentProducts?.length > 0 ? (
+          [...currentProducts].map((item: any) => <Card key={item.productCode} clothes={item} />)
         ) : (
           <div className="col-span-full text-center text-gray-500 text-lg py-20">
             Heç bir məhsul tapılmadı 😕
           </div>
         )}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-center w-full mt-8">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(displayProducts.length / cardsPerPage)}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );

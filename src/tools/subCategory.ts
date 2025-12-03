@@ -1,18 +1,9 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQuery } from "./base-query";
 
 export const subcategoriesApi = createApi({
   reducerPath: "subcategoriesApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: "https://weshare.az/api/sub-categories",
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-
-  }),
+  baseQuery: baseQuery('/sub-categories'),
   tagTypes: ["Subcategories"],
   endpoints: (build) => ({
     getSubcategories: build.query({

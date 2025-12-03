@@ -1,4 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQuery } from './base-query';
 
 export interface ColorAndSize {
   color: string;
@@ -20,7 +21,7 @@ export interface Product {
   userEmail: string;
   userPhone: string;
   productCode: string;
-  subcategory:{
+  subcategory: {
     id: number;
     name: string;
     category: {
@@ -29,6 +30,8 @@ export interface Product {
     };
   };
   categoryId: number;
+  subCategoryId: number;
+  brandId: number;
   price: number;
   gender: string;
   description: string;
@@ -36,27 +39,46 @@ export interface Product {
   colorAndSizes: ColorAndSize[];
   createdAt: string;
   offers: Offer[];
+  productConditions: string;
 }
 
 export const homeApi = createApi({
   reducerPath: 'homeApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://109.123.252.254:8081/api/v1/' }),
+  baseQuery: baseQuery("/products"),
   endpoints: (builder) => ({
-    getByOfferType: builder.query<Product[], { offerType: string; productCondition: string }>({
-      query: ({ offerType, productCondition }) =>
-        `products/get-by-Offer-Type?offerType=${offerType}&productCondition=${productCondition}`,
+    getByOfferType: builder.query({
+      query: () => "/filter",
     }),
-    filterProducts: builder.query<Product[], { subcategoryId?: number; categoryId?: number; color?: string; sizes?: string; gender?: string; minPrice?: number; maxPrice?: number }>({
-      query: ({ subcategoryId, categoryId, color, sizes, gender, minPrice, maxPrice }) => {
+    filterProducts: builder.query<Product[], {
+      categoryId?: number;
+      subCategoryId?: number;
+      brandId?: number;
+      gender?: string;
+      color?: string;
+      sizes?: string[];
+      offerType?: string;
+      productCondition?: string;
+      minPrice?: number;
+      maxPrice?: number;
+    }>({
+      query: (filters) => {
         const params = new URLSearchParams();
-        if (subcategoryId) params.append('subcategoryId', subcategoryId.toString());
-        if (categoryId) params.append('categoryId', categoryId.toString());
-        if (sizes) params.append('sizes', sizes);
-        if (gender) params.append('gender', gender);
-        if (color) params.append('color', color);
-        if (minPrice) params.append('minPrice', minPrice.toString());
-        if (maxPrice) params.append('maxPrice', maxPrice.toString());
-        return `products/filter?${params.toString()}`;
+
+        if (filters.categoryId) params.append("categoryId", filters.categoryId.toString());
+        if (filters.subCategoryId) params.append("subCategoryId", filters.subCategoryId.toString());
+        if (filters.brandId) params.append("brandId", filters.brandId.toString());
+        if (filters.gender) params.append("gender", filters.gender);
+        if (filters.color) params.append("color", filters.color);
+
+        if (filters.sizes && Array.isArray(filters.sizes)) {
+          filters.sizes.forEach((s) => params.append("sizes", s));
+        }
+        if (filters.offerType) params.append("offerType", filters.offerType);
+        if (filters.productCondition) params.append("productCondition", filters.productCondition);
+        if (filters.minPrice) params.append("minPrice", filters.minPrice.toString());
+        if (filters.maxPrice) params.append("maxPrice", filters.maxPrice.toString());
+
+        return `/filter?${params.toString()}`;
       },
     }),
   }),

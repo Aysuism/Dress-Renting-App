@@ -39,15 +39,23 @@ const SelectButton: React.FC<SelectButtonProps> = ({ selected, setSelected, opti
                         leaveTo="opacity-0"
                     >
                         <Listbox.Options className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg focus:outline-none max-h-64 overflow-auto">
+                            <Listbox.Option
+                                value=""
+                                className={({ active, selected: isSelected }) =>
+                                    `cursor-pointer select-none py-2 px-4 text-sm
+                                    ${active ? "bg-[#dbdbdb] text-black" : "text-gray-700"} 
+                                    ${isSelected ? "font-semibold" : "font-normal"}`}
+                            >
+                                {`${defaultText} Seçin`}
+                            </Listbox.Option>
                             {options.map((item) => (
                                 <Listbox.Option
-                                    key={item.id}
-                                    value={item.value} // FIXED: Use item.value instead of item.name
+                                    key={item.id || item.value}
+                                    value={item.value}
                                     className={({ active, selected: isSelected }) =>
                                         `cursor-pointer select-none py-2 px-4 text-sm
-          ${active ? "bg-[#dbdbdb] text-black" : "text-gray-700"} 
-          ${isSelected ? "font-semibold" : "font-normal"}`
-                                    }
+                                        ${active ? "bg-[#dbdbdb] text-black" : "text-gray-700"} 
+                                        ${isSelected ? "font-semibold" : "font-normal"}`}
                                 >
                                     {({ selected: isSelected }) => (
                                         <div className="flex items-center justify-between">

@@ -14,7 +14,6 @@ const WishlistCard = ({ item }: any) => {
         e.stopPropagation();
         removeWishlistItem(productId);
     };
-    console.log(item);
 
     return (
         <Link
@@ -67,7 +66,7 @@ const WishlistCard = ({ item }: any) => {
 
                     <p className="flex items-center justify-end gap-2">
                         Rəng:
-                        {item.colors.map((c: any, i: number) =>
+                        {item.colors?.map((c: any, i: number) =>
                             <span
                                 key={i}
                                 className="w-5 h-5 rounded-full border border-gray-300"
